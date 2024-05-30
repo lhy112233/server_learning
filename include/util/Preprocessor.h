@@ -9,11 +9,11 @@
 #define CPP23 202302L
 
 #if(__cplusplus < CPP20)
-#define likely
-#define unlikely
+#define LIKELY
+#define UNLIKELY
 #else
-#define likely [[likely]]
-#define unlikely [[unlikely]]
+#define LIKELY [[likely]]
+#define UNLIKELY [[unlikely]]
 #endif  //(__cplusplus < CPP20)
 
 

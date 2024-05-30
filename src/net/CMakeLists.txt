@@ -4,4 +4,6 @@ add_library(NET_LIB STATIC)
 
 target_sources(NET_LIB PUBLIC ${FILES})
 
-target_include_directories(NET_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(NET_LIB PUBLIC 
+${CMAKE_SOURCE_DIR}/include/net
+${CMAKE_SOURCE_DIR}/include/util)
