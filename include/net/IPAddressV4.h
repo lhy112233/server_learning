@@ -1,5 +1,5 @@
-#ifndef IPADDRESSV4_H_
-#define IPADDRESSV4_H_
+#ifndef HY_IPADDRESSV4_H_
+#define HY_IPADDRESSV4_H_
 
 #include <array>
 #include <cstddef>
@@ -62,4 +62,4 @@ public:
 
 
 
-#endif  //IPADDRESSV4_H_
+#endif  //HY_IPADDRESSV4_H_

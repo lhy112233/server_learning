@@ -1,5 +1,5 @@
-#ifndef EXCEPTED_H_
-#define EXCEPTED_H_
+#ifndef HY_EXCEPTED_H_
+#define HY_EXCEPTED_H_
 
 #include <exception>
 #include <tuple>
@@ -207,6 +207,45 @@ struct ExpectedStorage {
 // assign: 三种重新拷贝/移动分配器针对{eError}||{eValue}||{完整对象}
 // {eError}||{eValue}将调用doEmplaceAssign函数进行重新分配;
 
+template <typename Value, typename Error> struct ExpectedUnion {
+  union {
+    Value value_;
+    Error error_;
+    char ch_ = 0;
+  };
+  Which which_ = Which::eEmpty;
+
+  explicit constexpr ExpectedUnion(EmptyTag) noexcept {}
+  template <typename... Vs>
+  explicit constexpr ExpectedUnion(ValueTag, Vs &&...vs) noexcept(
+      noexcept(Value(std::forward<Vs>(vs)...)))
+      : value_(std::forward<Vs>(vs)...), which_(Which::eValue) {}
+  template <typename... Es>
+  explicit constexpr ExpectedUnion(ErrorTag, Es &&...es) noexcept(
+      Error(std::forward<Es>(es)...))
+      : error_(std::forward<Es>(es)...), which_(Which::eError) {}
+
+  ExpectedUnion(const ExpectedUnion &) {}
+  ExpectedUnion(ExpectedUnion &&) noexcept {}
+  ExpectedUnion &operator=(const ExpectedUnion &) { return *this; }
+  ExpectedUnion &operator=(ExpectedUnion &&) noexcept { return *this; }
+  ~ExpectedUnion() {}
+
+  Value &value() & { return value_; }
+  const Value &value() const & { return value_; }
+  Value &&value() && { return std::move(value_); }
+  const Value &&value() const && { return std::move(value_); }
+  Error &error() & { return error_; }
+  const Error &error() const & { return error_; }
+  Error &&error() && { return std::move(error_); }
+  const Error &&error() const && { return std::move(error_); }
+}; /// struct ExpectedUnion
+
+template<typename Derived ,bool ,bool Noexcept>
+struct CopyConstructible{
+
+} ///struct CopyConstructible
+
 } // namespace expected_detail
 
 /**
@@ -229,8 +268,8 @@ public:
   Unexpected(Unexpected &&) = default;
   Unexpected &operator=(const Unexpected &) = default;
   Unexpected &operator=(Unexpected &&) = default;
-  UNLIKELY constexpr Unexpected(const Error &err) : error_{err} {}
-  UNLIKELY constexpr Unexpected(Error &&err) : error_{std::move(err)} {}
+  constexpr Unexpected(const Error &err) : error_{err} {}
+  constexpr Unexpected(Error &&err) : error_{std::move(err)} {}
   template <typename Other,
             HY_REQUIRES_TRAILING(std::is_constructible_v<Error, Other &>)>
   constexpr Unexpected(Unexpected<Other> that) : error_{that.error()} {}
@@ -275,6 +314,9 @@ inline bool operator!=(const Unexpected<Error> &lhs,
 }
 
 // 最终构造的Unexpected的内在元素是无cv和无引用的,相当于构造器
+/*
+ * 用错误代码构造Unexpected,Unexpected可在异常情况下转换为Expected
+ */
 template <typename Error>
 [[nodiscard]] constexpr Unexpected<std::decay_t<Error>>
 makeUnexpected(Error &&err) {
@@ -310,6 +352,9 @@ private:
   Error error_;
 }; // class BadExpectedAccess
 
+/*
+ * Forward declarations
+ */
 template <class Value, class Error> class Expected;
 
 // 此处与Folly有区别,主要是模板形参顺序
@@ -317,19 +362,89 @@ template <typename Value, typename Error>
 [[nodiscard]] constexpr Expected<std::decay_t<Error>, Value>
 makeExpected(Error &&);
 
+/*
+ * Alias for an Expected type's associated value_type
+ */
 template <typename Expected>
 using ExpectedValueType =
     typename std::remove_reference_t<Expected>::value_type;
 
+/**
+ * Alias for an Expected type's associated error_type
+ */
 template <class Expected>
 using ExpectedErrorType =
     typename std::remove_reference_t<Expected>::error_type;
 
+// Details...
 namespace expected_detail {
-  
+template <typename Value, typename Error, typename = void> struct Promise;
 
-} //namespace expected_detail
+template <typename Value, typename Error> struct PromiseReturn;
+
+template <typename T>
+using IsCopyable =
+    std::conjunction<std::is_copy_constructible<T>, std::is_copy_assignable<T>>;
+
+template <typename T> inline constexpr bool IsCopyable_v = IsCopyable<T>::value;
+
+template <typename T>
+using IsMoveable =
+    std::conjunction<std::is_move_constructible<T>, std::is_move_assignable<T>>;
+
+template <typename T> inline constexpr bool IsMoveable_v = IsMoveable<T>::value;
+
+template <typename T>
+using IsNothrowCopyable =
+    std::conjunction<std::is_nothrow_copy_constructible<T>,
+                     std::is_nothrow_copy_assignable<T>>;
+
+template <typename T>
+inline constexpr bool IsNothrowCopyable_v = IsNothrowCopyable<T>::value;
+
+template <typename T>
+using IsNothrowMoveable =
+    std::conjunction<std::is_nothrow_move_constructible<T>,
+                     std::is_nothrow_move_assignable<T>>;
+
+template <typename T>
+inline constexpr bool IsNothrowMoveable_v = IsNothrowMoveable<T>::value;
+
+template <typename From, typename To>
+using IsConvertible = std::conjunction<std::is_constructible<To, From>,
+                                       std::is_assignable<To &, From &>>;
+
+template <typename From, typename To>
+inline constexpr bool IsConvertible_v = IsConvertible<To, From>::value;
+
+} // namespace expected_detail
+
+template <typename Value, typename Error>
+class Expected final : expected_detail::ExpectedStorage<Value, Error> {
+  template <typename, typename> friend class Expected;
+  template <typename, typename, expected_detail::StorageType>
+  friend struct expected_detail::ExpectedStorage;
+  friend struct expected_detail::ExpectedHelper;
+  using Base = expected_detail::ExpectedStorage<Value, Error>;
+  Base &base() & { return this; }
+  const Base &base() const & { return *this; }
+  Base &&base() && { return std::move(*this); }
+
+  struct MakeBadExpectedAccess {
+    template <typename E> auto operator()(E &&e) {
+      return BadExpectedAccess<Error>(std::forward<E &&>(e));
+    }
+  }; // struct MakeBadExpectedAccess
+
+public:
+  using value_type = Value;
+  using error_type = Error;
+
+  template <typename U> using rebind = Expected<U, Error>;
+
+  using promise_type = typename expected_detail::Promise<Value, Error>;
+}; // class Expected
 
 } // namespace hy
 
-#endif // EXCEPTED_H_
+#endif // HY_EXCEPTED_H_

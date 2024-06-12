@@ -1,11 +1,12 @@
 #include "Traits.hpp"
-#include "Utility.h"
+// #include "Utility.h"
 #include <cstddef>
-#include <typeinfo>
 #include <iostream>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 
-int main(){
-    int vec[100];
-    hy::MemZero(vec);
+int main() {
+  std::cerr<< hy::StrategyConjunction_v<std::is_copy_assignable,int,int,double>;
+
 }

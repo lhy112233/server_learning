@@ -15,5 +15,5 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/execution-charset:gbk>")
 endif()
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/src)
-# add_subdirectory(${CMAKE_SOURCE_DIR}/test)
+add_subdirectory(${CMAKE_SOURCE_DIR}/test)
 # add_subdirectory(${CMAKE_SOURCE_DIR})

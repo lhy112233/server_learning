@@ -7,9 +7,13 @@ namespace hy {
 
 // 平替Folly的struct StrictConjunction,
 //  但需要C++17,主要是因为折叠表达式的加入和模板模板形参的typename.
-template <template <typename...> typename Strategy, typename... Ts>
-struct StrategyConjunction
-    : std::integral_constant<bool, (Strategy<Ts>::value && ...)> {};
+/*旧实现方式*/
+// template <template <typename...> typename Strategy, typename... Ts>
+// struct StrategyConjunction
+//     : std::integral_constant<bool, (Strategy<Ts>::value && ...)> {};
+/*新实现方式,具有短路判断的优点(由std::conjunction提供此特性)*/
+template<template<typename...> typename Strategy,typename... Ts>
+struct StrategyConjunction : std::conjunction<Strategy<Ts>...>{};
 
 template <template <typename...> typename Strategy, typename... Ts>
 inline constexpr bool StrategyConjunction_v =
