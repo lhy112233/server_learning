@@ -32,6 +32,8 @@
 #define HY_REQUIRES(...) template <HY_REQUIRES_IMPL(__VA_ARGS__)>
 
 namespace hy {
+
+// Details...
 namespace expected_detail {
 namespace expected_detail_ExpectedHelper {
 struct ExpectedHelper; // 声明
@@ -41,6 +43,44 @@ using expected_detail_ExpectedHelper::ExpectedHelper;
 } // namespace expected_detail
 
 namespace expected_detail {
+
+template <typename Value, typename Error, typename = void> struct Promise;
+
+template <typename Value, typename Error> struct PromiseReturn;
+
+template <typename T>
+using IsCopyable =
+    std::conjunction<std::is_copy_constructible<T>, std::is_copy_assignable<T>>;
+
+template <typename T> inline constexpr bool IsCopyable_v = IsCopyable<T>::value;
+
+template <typename T>
+using IsMovable =
+    std::conjunction<std::is_move_constructible<T>, std::is_move_assignable<T>>;
+
+template <typename T> inline constexpr bool IsMoveable_v = IsMovable<T>::value;
+
+template <typename T>
+using IsNothrowCopyable =
+    std::conjunction<std::is_nothrow_copy_constructible<T>,
+                     std::is_nothrow_copy_assignable<T>>;
+
+template <typename T>
+inline constexpr bool IsNothrowCopyable_v = IsNothrowCopyable<T>::value;
+
+template <typename T>
+using IsNothrowMovable = std::conjunction<std::is_nothrow_move_constructible<T>,
+                                          std::is_nothrow_move_assignable<T>>;
+
+template <typename T>
+inline constexpr bool IsNothrowMoveable_v = IsNothrowMovable<T>::value;
+
+template <typename From, typename To>
+using IsConvertible = std::conjunction<std::is_constructible<To, From>,
+                                       std::is_assignable<To &, From &>>;
+
+template <typename From, typename To>
+inline constexpr bool IsConvertible_v = IsConvertible<To, From>::value;
 
 /************struct ExpectedStorage及其附属工具************/
 /***********************Begin-Tag*************************/
@@ -241,10 +281,114 @@ template <typename Value, typename Error> struct ExpectedUnion {
   const Error &&error() const && { return std::move(error_); }
 }; /// struct ExpectedUnion
 
-template<typename Derived ,bool ,bool Noexcept>
-struct CopyConstructible{
+template <typename Derived, bool, bool Noexcept> struct CopyConstructible {
+  constexpr CopyConstructible() = default;
+  CopyConstructible(const CopyConstructible &that) noexcept(Noexcept) {
+    static_cast<Derived *>(this)->assign(static_cast<const Derived &>(that));
+  }
+  constexpr CopyConstructible(CopyConstructible &&) = default;
+  CopyConstructible &operator=(const CopyConstructible &) = default;
+  CopyConstructible &operator=(CopyConstructible &&) = default;
+}; /// struct CopyConstructible
 
-} ///struct CopyConstructible
+template <typename Derived, bool Noexcept>
+struct CopyConstructible<Derived, false, Noexcept> {
+  constexpr CopyConstructible() = default;
+  CopyConstructible(const CopyConstructible &) = delete;
+  constexpr CopyConstructible(CopyConstructible &&) = default;
+  CopyConstructible &operator=(const CopyConstructible &) = default;
+  CopyConstructible &operator=(CopyConstructible &&) = default;
+}; /// struct CopyConstructible<Derived, false, Noexcept>
+
+template <class Derived, bool, bool Noexcept> struct MoveConstructible {
+  constexpr MoveConstructible() = default;
+  constexpr MoveConstructible(const MoveConstructible &) = default;
+  MoveConstructible(MoveConstructible &&that) noexcept(Noexcept) {
+    static_cast<Derived *>(this)->assign(
+        std::move(static_cast<Derived &>(that)));
+  }
+  MoveConstructible &operator=(const MoveConstructible &) = default;
+  MoveConstructible &operator=(MoveConstructible &&) = default;
+}; /// struct MoveConstructible
+
+template <class Derived, bool Noexcept>
+struct MoveConstructible<Derived, false, Noexcept> {
+  constexpr MoveConstructible() = default;
+  constexpr MoveConstructible(const MoveConstructible &) = default;
+  MoveConstructible(MoveConstructible &&) = delete;
+  MoveConstructible &operator=(const MoveConstructible &) = default;
+  MoveConstructible &operator=(MoveConstructible &&) = default;
+}; /// struct MoveConstructible<Derived, false, Noexcept>
+
+template <class Derived, bool, bool Noexcept> struct CopyAssignable {
+  constexpr CopyAssignable() = default;
+  constexpr CopyAssignable(const CopyAssignable &) = default;
+  constexpr CopyAssignable(CopyAssignable &&) = default;
+  CopyAssignable &operator=(const CopyAssignable &that) noexcept(Noexcept) {
+    static_cast<Derived *>(this)->assign(static_cast<const Derived &>(that));
+    return *this;
+  }
+  CopyAssignable &operator=(CopyAssignable &&) = default;
+}; /// struct CopyAssignable
+
+template <class Derived, bool Noexcept>
+struct CopyAssignable<Derived, false, Noexcept> {
+  constexpr CopyAssignable() = default;
+  constexpr CopyAssignable(const CopyAssignable &) = default;
+  constexpr CopyAssignable(CopyAssignable &&) = default;
+  CopyAssignable &operator=(const CopyAssignable &) = delete;
+  CopyAssignable &operator=(CopyAssignable &&) = default;
+}; /// struct CopyAssignable<Derived, false, Noexcept>
+
+template <class Derived, bool, bool Noexcept> struct MoveAssignable {
+  constexpr MoveAssignable() = default;
+  constexpr MoveAssignable(const MoveAssignable &) = default;
+  constexpr MoveAssignable(MoveAssignable &&) = default;
+  MoveAssignable &operator=(const MoveAssignable &) = default;
+  MoveAssignable &operator=(MoveAssignable &&that) noexcept(Noexcept) {
+    static_cast<Derived *>(this)->assign(
+        std::move(static_cast<Derived &>(that)));
+    return *this;
+  }
+}; /// struct MoveAssignable
+
+template <class Derived, bool Noexcept>
+struct MoveAssignable<Derived, false, Noexcept> {
+  constexpr MoveAssignable() = default;
+  constexpr MoveAssignable(const MoveAssignable &) = default;
+  constexpr MoveAssignable(MoveAssignable &&) = default;
+  MoveAssignable &operator=(const MoveAssignable &) = default;
+  MoveAssignable &operator=(MoveAssignable &&that) = delete;
+}; /// struct MoveAssignable<Derived, false, Noexcept>
+
+template <typename Value, typename Error>
+struct ExpectedStorage<Value, Error, StorageType::eUnion>
+    : ExpectedUnion<Value, Error>,
+      CopyConstructible<
+          ExpectedStorage<Value, Error, StorageType::eUnion>,
+          StrategyConjunction_v<std::is_copy_constructible, Value, Error>,
+          StrategyConjunction_v<std::is_nothrow_copy_constructible, Value,
+                                Error>>,
+      MoveConstructible<
+          ExpectedStorage<Value, Error, StorageType::eUnion>,
+          StrategyConjunction_v<std::is_move_constructible, Value, Error>,
+          StrategyConjunction_v<std::is_nothrow_move_constructible, Value,
+                                Error>>,
+      CopyAssignable<ExpectedStorage<Value, Error, StorageType::eUnion>,
+                     StrategyConjunction_v<IsCopyable, Value, Error>,
+                     StrategyConjunction_v<IsNothrowCopyable, Value, Error>>,
+      MoveAssignable<ExpectedStorage<Value, Error, StorageType::eUnion>,
+                     StrategyConjunction_v<IsMovable, Value, Error>,
+                     StrategyConjunction_v<IsNothrowMovable, Value, Error>> {
+using value_type = Value;
+using error_type = Error;
+using Base = ExpectedUnion<Value, Error>;
+
+template<typename E = Error,typename = decltype(E{})>
+constexpr ExpectedStorage() noexcept(noexcept(noexcept(E{}))) :Base{ErrorTag{}}{}
+ExpectedStorage(const ExpectedStorage&) = default;
+
+                     }
 
 } // namespace expected_detail
 
@@ -375,49 +519,6 @@ using ExpectedValueType =
 template <class Expected>
 using ExpectedErrorType =
     typename std::remove_reference_t<Expected>::error_type;
-
-// Details...
-namespace expected_detail {
-template <typename Value, typename Error, typename = void> struct Promise;
-
-template <typename Value, typename Error> struct PromiseReturn;
-
-template <typename T>
-using IsCopyable =
-    std::conjunction<std::is_copy_constructible<T>, std::is_copy_assignable<T>>;
-
-template <typename T> inline constexpr bool IsCopyable_v = IsCopyable<T>::value;
-
-template <typename T>
-using IsMoveable =
-    std::conjunction<std::is_move_constructible<T>, std::is_move_assignable<T>>;
-
-template <typename T> inline constexpr bool IsMoveable_v = IsMoveable<T>::value;
-
-template <typename T>
-using IsNothrowCopyable =
-    std::conjunction<std::is_nothrow_copy_constructible<T>,
-                     std::is_nothrow_copy_assignable<T>>;
-
-template <typename T>
-inline constexpr bool IsNothrowCopyable_v = IsNothrowCopyable<T>::value;
-
-template <typename T>
-using IsNothrowMoveable =
-    std::conjunction<std::is_nothrow_move_constructible<T>,
-                     std::is_nothrow_move_assignable<T>>;
-
-template <typename T>
-inline constexpr bool IsNothrowMoveable_v = IsNothrowMoveable<T>::value;
-
-template <typename From, typename To>
-using IsConvertible = std::conjunction<std::is_constructible<To, From>,
-                                       std::is_assignable<To &, From &>>;
-
-template <typename From, typename To>
-inline constexpr bool IsConvertible_v = IsConvertible<To, From>::value;
-
-} // namespace expected_detail
 
 template <typename Value, typename Error>
 class Expected final : expected_detail::ExpectedStorage<Value, Error> {
