@@ -44,6 +44,22 @@ using expected_detail_ExpectedHelper::ExpectedHelper;
 
 namespace expected_detail {
 
+/**
+ * namesapce expected_detail主要用于处理Expected的内部实现细节，
+ * 重点类是模板类struct
+ * ExpectedStorage,此模板类一共有三种细分实例化类型,用于处理保存数据的不同，
+ * 三种类型分别由enum class StorageType控制模板实参从而控制实例化。
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+
 template <typename Value, typename Error, typename = void> struct Promise;
 
 template <typename Value, typename Error> struct PromiseReturn;
@@ -128,7 +144,7 @@ auto doEmplaceAssign(int, T &t, U &&u) noexcept(noexcept(
 }
 
 /*同上*/
-template <class T, class U>
+template <typename T, typename U>
 auto doEmplaceAssign(long, T &t,
                      U &&u) -> decltype(void(T(std::forward<U>(u)))) {
   auto addr = const_cast<void *>(static_cast<void const *>(std::addressof(t)));
@@ -137,7 +153,7 @@ auto doEmplaceAssign(long, T &t,
 }
 
 /*同上*/
-template <class T, class... Us>
+template <typename T, typename... Us>
 auto doEmplaceAssign(int, T &t, Us &&...us) noexcept(
     noexcept(t = T(std::forward<Us>(us)...)))
     -> decltype(void(t = T(std::forward<Us>(us)...))) {
@@ -145,7 +161,7 @@ auto doEmplaceAssign(int, T &t, Us &&...us) noexcept(
 }
 
 /*同上*/
-template <class T, class... Us>
+template <typename T, typename... Us>
 auto doEmplaceAssign(long, T &t,
                      Us &&...us) -> decltype(void(T(std::forward<Us>(us)...))) {
   auto addr = const_cast<void *>(static_cast<void const *>(std::addressof(t)));
@@ -211,13 +227,13 @@ struct ExpectedStorage {
   }
 
   /*智能选择重新拷贝分配的对象类型*/
-  template <typename Other> void assign(Other &&that) {
-    switch (that.which_) {
+  template <typename Other> void assign(Other &&rhs) {
+    switch (rhs.which_) {
     case Which::eValue:
-      this->assignValue(std::forward<Other>(that).value());
+      this->assignValue(std::forward<Other>(rhs).value());
       break;
     case Which::eError:
-      this->assignError(std::forward<Other>(that).error());
+      this->assignError(std::forward<Other>(rhs).error());
       break;
     case Which::eEmpty:
     default:
@@ -239,13 +255,15 @@ struct ExpectedStorage {
   const Error &&error() const && {
     return std::move(error_);
   } // 没什么用的，只是为了类型完整性
-}; // struct ExpectedStorage
+}; // struct ExpectedStorage<Value, Error, StorageType::ePODUnion>
 
 /*struct ExpectedStorage调用示意图*/
 // Constructor:
 // 三种构造函数:eError、eValue、eEmpty三种(使用三种tag进行重载分发选择),默认使用eError
 // assign: 三种重新拷贝/移动分配器针对{eError}||{eValue}||{完整对象}
 // {eError}||{eValue}将调用doEmplaceAssign函数进行重新分配;
+
+/*****************ExpectedStorage Begin*****************************/
 
 template <typename Value, typename Error> struct ExpectedUnion {
   union {
@@ -281,6 +299,10 @@ template <typename Value, typename Error> struct ExpectedUnion {
   const Error &&error() const && { return std::move(error_); }
 }; /// struct ExpectedUnion
 
+/*
+ * 以下函数用于判断是否能执行相应的操作
+ * 使用继承的方式去逐个控制子对象的默认生成的操作
+ */
 template <typename Derived, bool, bool Noexcept> struct CopyConstructible {
   constexpr CopyConstructible() = default;
   CopyConstructible(const CopyConstructible &that) noexcept(Noexcept) {
@@ -300,7 +322,7 @@ struct CopyConstructible<Derived, false, Noexcept> {
   CopyConstructible &operator=(CopyConstructible &&) = default;
 }; /// struct CopyConstructible<Derived, false, Noexcept>
 
-template <class Derived, bool, bool Noexcept> struct MoveConstructible {
+template <typename Derived, bool, bool Noexcept> struct MoveConstructible {
   constexpr MoveConstructible() = default;
   constexpr MoveConstructible(const MoveConstructible &) = default;
   MoveConstructible(MoveConstructible &&that) noexcept(Noexcept) {
@@ -311,7 +333,7 @@ template <class Derived, bool, bool Noexcept> struct MoveConstructible {
   MoveConstructible &operator=(MoveConstructible &&) = default;
 }; /// struct MoveConstructible
 
-template <class Derived, bool Noexcept>
+template <typename Derived, bool Noexcept>
 struct MoveConstructible<Derived, false, Noexcept> {
   constexpr MoveConstructible() = default;
   constexpr MoveConstructible(const MoveConstructible &) = default;
@@ -320,7 +342,7 @@ struct MoveConstructible<Derived, false, Noexcept> {
   MoveConstructible &operator=(MoveConstructible &&) = default;
 }; /// struct MoveConstructible<Derived, false, Noexcept>
 
-template <class Derived, bool, bool Noexcept> struct CopyAssignable {
+template <typename Derived, bool, bool Noexcept> struct CopyAssignable {
   constexpr CopyAssignable() = default;
   constexpr CopyAssignable(const CopyAssignable &) = default;
   constexpr CopyAssignable(CopyAssignable &&) = default;
@@ -331,7 +353,7 @@ template <class Derived, bool, bool Noexcept> struct CopyAssignable {
   CopyAssignable &operator=(CopyAssignable &&) = default;
 }; /// struct CopyAssignable
 
-template <class Derived, bool Noexcept>
+template <typename Derived, bool Noexcept>
 struct CopyAssignable<Derived, false, Noexcept> {
   constexpr CopyAssignable() = default;
   constexpr CopyAssignable(const CopyAssignable &) = default;
@@ -340,7 +362,7 @@ struct CopyAssignable<Derived, false, Noexcept> {
   CopyAssignable &operator=(CopyAssignable &&) = default;
 }; /// struct CopyAssignable<Derived, false, Noexcept>
 
-template <class Derived, bool, bool Noexcept> struct MoveAssignable {
+template <typename Derived, bool, bool Noexcept> struct MoveAssignable {
   constexpr MoveAssignable() = default;
   constexpr MoveAssignable(const MoveAssignable &) = default;
   constexpr MoveAssignable(MoveAssignable &&) = default;
@@ -352,7 +374,7 @@ template <class Derived, bool, bool Noexcept> struct MoveAssignable {
   }
 }; /// struct MoveAssignable
 
-template <class Derived, bool Noexcept>
+template <typename Derived, bool Noexcept>
 struct MoveAssignable<Derived, false, Noexcept> {
   constexpr MoveAssignable() = default;
   constexpr MoveAssignable(const MoveAssignable &) = default;
@@ -380,15 +402,137 @@ struct ExpectedStorage<Value, Error, StorageType::eUnion>
       MoveAssignable<ExpectedStorage<Value, Error, StorageType::eUnion>,
                      StrategyConjunction_v<IsMovable, Value, Error>,
                      StrategyConjunction_v<IsNothrowMovable, Value, Error>> {
-using value_type = Value;
-using error_type = Error;
-using Base = ExpectedUnion<Value, Error>;
+  using value_type = Value;
+  using error_type = Error;
+  using Base = ExpectedUnion<Value, Error>;
 
-template<typename E = Error,typename = decltype(E{})>
-constexpr ExpectedStorage() noexcept(noexcept(noexcept(E{}))) :Base{ErrorTag{}}{}
-ExpectedStorage(const ExpectedStorage&) = default;
+  template <typename E = Error, typename = decltype(E{})>
+  constexpr ExpectedStorage() noexcept(noexcept(E{})) : Base{ErrorTag{}} {}
+  ExpectedStorage(const ExpectedStorage &) = default;
+  ExpectedStorage(ExpectedStorage &&) = default;
+  ExpectedStorage &operator=(const ExpectedStorage &) = default;
+  ExpectedStorage &operator=(ExpectedStorage &&) = default;
+  using ExpectedUnion<Value, Error>::ExpectedUnion;
+  ~ExpectedStorage() { clear(); }
+  void clear() noexcept {
+    switch (this->which_) {
+    case Which::eValue:
+      this->value().~Value();
+      break;
+    case Which::eError:
+      this->error().~Error();
+      break;
+    case Which::eEmpty:
+      break;
+    }
+    this->which_ = Which::eEmpty;
+  }
+  bool uninitializedByException() const noexcept {
+    return this->which_ == Which::eEmpty;
+  }
+  template <typename... Vs> void assignValue(Vs &&...vs) {
+    auto &val = this->value();
+    if (this->which_ == Which::eValue) {
+      expected_detail::doEmplaceAssign(0, val, std::forward<Vs>(vs)...);
+    } else {
+      this->clear();
+      auto addr =
+          const_cast<void *>(static_cast<void const *>(std::addressof(val)));
+      ::new (addr) Value(std::forward<Vs>(vs)...);
+      this->which_ = Which::eValue;
+    }
+  }
+  template <typename... Es> void assignError(Es &&...es) {
+    if (this->which_ == Which::eError) {
+      expected_detail::doEmplaceAssign(0, this->error(),
+                                       std::forward<Es>(es)...);
+    } else {
+      this->clear();
+      ::new ((void *)std::addressof(this->error()))
+          Error(std::forward<Es>(es)...);
+      this->which_ = Which::eError;
+    }
+  }
+  bool isSelfAssign(const ExpectedStorage *that) const { return this == that; }
+  constexpr bool isSelfAssign(const void *) const { return false; }
+  template <typename Other> void assign(Other &&that) {
+    if (isSelfAssign(&that)) {
+      return;
+    }
+    switch (that.which_) {
+    case Which::eValue:
+      this->assignValue(std::forward<Other>(that).value());
+      break;
+    case Which::eError:
+      this->assignError(std::forward<Other>(that).error());
+      break;
+    case Which::eEmpty:
+    default:
+      this->clear();
+      break;
+    }
+  }
 
-                     }
+}; /// struct ExpectedStorage<Value, Error, StorageType::eUnion>
+
+// For small (pointer-sized) trivial types, a struct is faster than a union.
+template <typename Value, typename Error>
+struct ExpectedStorage<Value, Error, StorageType::ePODStruct> {
+  using value_type = Value;
+  using error_type = Error;
+  Which which_;
+  Error error_;
+  Value value_;
+
+  constexpr ExpectedStorage() noexcept
+      : which_(Which::eError), error_{}, value_{} {}
+  explicit constexpr ExpectedStorage(EmptyTag) noexcept
+      : which_(Which::eEmpty), error_{}, value_{} {}
+  template <typename... Vs>
+  explicit constexpr ExpectedStorage(ValueTag, Vs &&...vs) noexcept(
+      noexcept(Value(std::forward<Vs>(vs)...)))
+      : which_(Which::eValue), error_{}, value_(std::forward<Vs>(vs)...) {}
+  template <typename... Es>
+  explicit constexpr ExpectedStorage(ErrorTag, Es &&...es) noexcept(
+      noexcept(Error(std::forward<Es>(es)...)))
+      : which_(Which::eError), error_(std::forward<Es>(es)...), value_{} {}
+  void clear() noexcept {}
+  constexpr static bool uninitializedByException() noexcept { return false; }
+  template <typename... Vs> void assignValue(Vs &&...vs) {
+    expected_detail::doEmplaceAssign(0, value_, std::forward<Vs>(vs)...);
+    which_ = Which::eValue;
+  }
+  template <typename... Es> void assignError(Es &&...es) {
+    expected_detail::doEmplaceAssign(0, error_, std::forward<Es>(es)...);
+    which_ = Which::eError;
+  }
+  template <typename Other> void assign(Other &&that) {
+    switch (that.which_) {
+    case Which::eValue:
+      this->assignValue(std::forward<Other>(that).value());
+      break;
+    case Which::eError:
+      this->assignError(std::forward<Other>(that).error());
+      break;
+    case Which::eEmpty:
+    default:
+      this->clear();
+      break;
+    }
+  }
+  Value &value() & { return value_; }
+  const Value &value() const & { return value_; }
+  Value &&value() && { return std::move(value_); }
+  const Value &&value() const && { return std::move(value_); }
+  Error &error() & { return error_; }
+  const Error &error() const & { return error_; }
+  Error &&error() && { return std::move(error_); }
+  const Error &&error() const && { return std::move(error_); }
+}; /// struct ExpectedStorage<Value, Error, StorageType::ePODStruct>
+
+namespace expected_detail_ExpectedHelper {
+
+} // namespace expected_detail_ExpectedHelper
 
 } // namespace expected_detail
 
@@ -427,8 +571,8 @@ public:
 
   template <typename Other,
             HY_REQUIRES_TRAILING(std::is_assignable_v<Error &, Other &&>)>
-  Unexpected &operator=(const Unexpected<Other> &&that) {
-    error_ = std::move(that.error());
+  Unexpected &operator=(const Unexpected<Other> &&rhs) {
+    error_ = std::move(rhs.error());
   }
 
   /*Observers*/
@@ -467,7 +611,8 @@ makeUnexpected(Error &&err) {
   return Unexpected<std::decay_t<Error>>{std::forward<Error>(err)};
 }
 
-template <class Error> class BadExpectedAccess; /// class BadExpectedAccess声明
+template <typename Error>
+class BadExpectedAccess; /// class BadExpectedAccess声明
 
 template <> class BadExpectedAccess<void> : public std::exception {
 public:
@@ -496,10 +641,12 @@ private:
   Error error_;
 }; // class BadExpectedAccess
 
+/******************由此开始都是class Expected的定义内容了*******************/
+
 /*
  * Forward declarations
  */
-template <class Value, class Error> class Expected;
+template <typename Value, typename Error> class Expected;
 
 // 此处与Folly有区别,主要是模板形参顺序
 template <typename Value, typename Error>
@@ -516,7 +663,7 @@ using ExpectedValueType =
 /**
  * Alias for an Expected type's associated error_type
  */
-template <class Expected>
+template <typename Expected>
 using ExpectedErrorType =
     typename std::remove_reference_t<Expected>::error_type;
 
@@ -533,7 +680,7 @@ class Expected final : expected_detail::ExpectedStorage<Value, Error> {
 
   struct MakeBadExpectedAccess {
     template <typename E> auto operator()(E &&e) {
-      return BadExpectedAccess<Error>(std::forward<E &&>(e));
+      return BadExpectedAccess<Error>(std::forward<E>(e));
     }
   }; // struct MakeBadExpectedAccess
 
@@ -544,6 +691,30 @@ public:
   template <typename U> using rebind = Expected<U, Error>;
 
   using promise_type = typename expected_detail::Promise<Value, Error>;
+
+  static_assert(
+      !std::is_reference_v<Value>,
+      "The Value template argument of Expected cannot be a reference type!");
+
+  static_assert(!std::is_abstract_v<Value>,
+                "The Value template argument of Expected cannot be an abstract "
+                "class type!");
+
+  /*
+   * Constructors
+   */
+  template <class B = Base, class = decltype(B{})>
+  Expected() noexcept(noexcept(B{})) : Base{} {}
+  Expected(const Expected &rhs) = default;
+  Expected(Expected &&rhs) = default;
+
+  template <typename V, typename E,
+            HY_REQUIRES_TRAILING(!std::is_same_v<Expected<V, E>, Expected> &&
+                                 std::is_constructible_v<Value, V &&> &&
+                                 std::is_constructible_v<Error, E &&>)>
+  Expected(Expected<V, E> rhs) : Base{expected_detail::EmptyTag{}} {
+    this->assign(std::move(rhs));
+  }
 }; // class Expected
 
 } // namespace hy
