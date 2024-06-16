@@ -4,9 +4,12 @@
 #include <iostream>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <vector>
 
+
+
 int main() {
-  std::cerr<< hy::StrategyConjunction_v<std::is_copy_assignable,int,int,double>;
+
 
 }
