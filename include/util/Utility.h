@@ -5,12 +5,12 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include <string.h>
 
 namespace hy {
 template <typename T, std::size_t Size = sizeof(T)>
 void MemZero(T &obj, std::size_t size = Size) noexcept {
 #ifdef __STDC_LIB_EXT1__
-#include <string.h>
   memset_s(static_cast<void *>(std::addressof(obj)), 1, 0, size);
 #else
   std::memset(static_cast<void *>(std::addressof(obj)), 0, size);
