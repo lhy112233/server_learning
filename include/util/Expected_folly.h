@@ -1,5 +1,5 @@
-#ifndef HY_EXCEPTED_H_
-#define HY_EXCEPTED_H_
+#ifndef HY_EXCEPTED_FOLLY_H_
+#define HY_EXCEPTED_FOLLY_H_
 
 #include <exception>
 #include <tuple>
@@ -559,7 +559,7 @@ struct ExpectedStorage<Value, Error, StorageType::ePODStruct> {  /// ePODSttruct
 };  /// struct ExpectedStorage<Value, Error, StorageType::ePODStruct>
 
 namespace expected_detail_ExpectedHelper {
-  
+
 }  // namespace expected_detail_ExpectedHelper
 
 }  // namespace expected_detail
@@ -591,13 +591,14 @@ class Unexpected final {
   constexpr Unexpected(Error&& err) : error_{std::move(err)} {}
   template <typename Other,
             HY_REQUIRES_TRAILING(std::is_constructible_v<Error, Other&>)>
-  constexpr Unexpected(Unexpected<Other> rhs) : error_{rhs.error()} {}
+  constexpr Unexpected(Unexpected<Other> rhs)
+      : error_{std::move(rhs.error())} {}
 
   /*Assignment*/
   template <typename Other,
             HY_REQUIRES_TRAILING(std::is_assignable_v<Error&, Other&&>)>
   Unexpected& operator=(const Unexpected<Other>& rhs) {
-    error_ = rhs.error();
+    error_ = std::move(rhs.error());
   }
 
   template <typename Other,
@@ -672,7 +673,6 @@ class BadExpectedAccess : public BadExpectedAccess<void> {
  private:
   Error error_;
 };  // class BadExpectedAccess
-
 
 /******************由此开始都是class Expected的定义内容了*******************/
 
@@ -768,6 +768,10 @@ class Expected final : expected_detail::ExpectedStorage<Value, Error> {
 
 };  // class Expected
 
+/*NonMember functions*/
+template <typename Value, typename Error>
+constexpr Expected<std::decay<Value>, Error> makeExpected(Value&&) { /*TODO*/ }
+
 }  // namespace hy
 
-#endif  // HY_EXCEPTED_H_
+#endif  // HY_EXCEPTED_FOLLY_H_
