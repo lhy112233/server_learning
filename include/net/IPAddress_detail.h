@@ -2,11 +2,12 @@
 #define HY_IPADDRESS_DETAIL_H_
 #include <sys/socket.h>
 #include <cstddef>
+#include <string>
 namespace hy {
 namespace detail {
-const char* familyNameStrDefault(sa_family_t family);
+std::string familyNameStrDefault(sa_family_t family);
 
-inline const char* familyNameStr(sa_family_t family) {
+inline std::string familyNameStr(sa_family_t family) {
   switch (family) {
     case AF_INET:
       return "AF_INIT";
