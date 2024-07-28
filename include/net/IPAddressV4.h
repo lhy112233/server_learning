@@ -58,6 +58,9 @@ class IPAddressV4 {
    */
   static IPAddressV4 fromLongHBO(uint32_t ip);
 
+
+  static IPAddressV4 fromBinary(ByteArray4, bytes);
+
   /**
    * Create a new IPAddressV4 from the provided string.
    *
