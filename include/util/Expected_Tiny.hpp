@@ -1,50 +1,19 @@
 #ifndef HY_EXPECTED_HPP_
 #define HY_EXPECTED_HPP_
+#include <memory>
 #include <type_traits>
+#include <utility>
 #include "Bad_expected_access.hpp"
 #include "Unexpected.hpp"
 
 namespace hy {
 
-namespace detail {
 template <typename Value, typename Error>
-struct expected_base {
-  /*Constructors*/
-  template <typename Val = Value,
-            std::enable_if_t<std::is_default_constructible_v<Val>>>
-  constexpr expected_base() : val_{} {}
-  constexpr expected_base(const expected_base& other) {
-    if (has_val_) {
-      val_ = other.val_;
-    } else {
-      unex_ = other.unex_;
-    }
-  }
-  constexpr expected_base(expected_base&& other) noexcept(
-      std::is_nothrow_move_constructible_v<Value> &&
-      std::is_nothrow_move_constructible_v<Error>) {
-    if (has_val_) {
-      val_ = std::move(other.val_);
-    } else {
-      unex_ = std::move(other.unex_);
-    }
-  }
-
-  bool has_val_;
-  union {
-    Value val_;
-    Error unex_;
-  };
-};  //struct expected_base
-}  //namespace detail
-
-template <typename Value, typename Error>
-class expected final : detail::expected_base<Value, Error> {
+class expected final {
   /*friend*/
   template <typename V, typename E>
-  friend struct detail::expected_base;
-  template <typename V, typename E>
   friend class expected;
+
   /*static_assert*/
   static_assert(std::is_destructible_v<Value>, "Value must be destrucy");
   static_assert(std::is_destructible_v<Error>, "Error must be destrucy");
@@ -61,6 +30,7 @@ class expected final : detail::expected_base<Value, Error> {
   /*Constructors*/
   constexpr expected() = default;
   constexpr expected(const expected& other) {}
+  
 
   /*Observers*/
   constexpr const Value* operator->() const noexcept {
@@ -169,19 +139,94 @@ class expected final : detail::expected_base<Value, Error> {
     return has_value() ? std::forward<G>(default_value) : std::move(error());
   }
 
+  template <class F>
+  constexpr auto and_then(F&& f) const& {
+    if constexpr (has_value()) {
+      return std::forward<F>(f)(value());
+    } else {
+      return hy::expected<Value, Error>{error()};
+    }
+  }
 
+  template <class F>
+  constexpr auto and_then(F&& f) && {
+    if constexpr (has_value()) {
+      return std::forward<F>(f)(value());
+    } else {
+      return hy::expected<Value, Error>{std::move(error())};
+    }
+  }
 
-
-/*Destructor*/
-~expected() = default;
-
-
+  template <class F>
+  constexpr auto and_then(F&& f) const&& {
+    if constexpr (has_value()) {
+      return std::forward<F>(f)(value());
+    } else {
+      return hy::expected<Value, Error>{error()};
+    }
+  }
 
   /*Setters*/
-  template< class... Args >
-constexpr Value& emplace( Args&&... args ) noexcept{
-    
+  template <class... Args, typename = std::enable_if_t<std::is_nothrow_constructible_v<Value, Args...>>>
+  constexpr Value& emplace(Args&&... args) noexcept {
+
+  }
+
+  template< class U, class... Args >
+constexpr Value& emplace( std::initializer_list<U> il, Args&&... args ) noexcept{
+
 }
+
+
+
+  constexpr void swap( expected& other ) noexcept(
+    std::is_nothrow_move_constructible_v<Value> && std::is_nothrow_swappable_v<Value> &&
+    std::is_nothrow_move_constructible_v<Error> && std::is_nothrow_swappable_v<Error>
+){
+  if(has_value() && other.has_val()){
+    using std::swap;
+    swap(value(),other.value());
+  }else if(has_value() && !other.has_value()){
+    /*TODO*/
+  }else if(!has_value() && has_value()){
+    other.swap(*this);
+  }else{
+    using std::swap;
+swap(error(), other.error());
+  }
+}
+
+  /*friend*/
+  template <class T2, class E2,
+            typename = std::enable_if_t<!std::is_void_v<T2>>>
+  friend constexpr bool operator==(const expected& x,
+                                   const expected<T2, E2>& y) {
+    if (x.has_value()) {
+      return x.value() == y.value();
+    } else {
+      return x.error() == y.error();
+    }
+  }
+
+  template< class T2 >
+friend constexpr bool operator==( const expected& x, const T2& val ){
+  return x.value() == val;
+}
+
+template< class E2 >
+friend constexpr bool operator==( const expected& x,
+                                  const unexpected<E2>& e ){
+                                    return x.error() == e.error();
+                                  }
+
+friend constexpr void swap( expected& lhs, expected& rhs ) noexcept(noexcept(lhs.swap(rhs))){
+  lhs.swap(rhs);
+}
+
+private:
+bool has_val_;
+Value val_;
+Error unex_;
 
 };  //class expected
 
