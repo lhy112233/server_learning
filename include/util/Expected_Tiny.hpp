@@ -29,8 +29,17 @@ class expected final {
 
   /*Constructors*/
   constexpr expected() = default;
-  constexpr expected(const expected& other) {}
-  
+  constexpr expected(const expected& other) : has_val_(other.has_value()) {
+    if (has_value()) {
+      value() = other.value();
+    } else {
+      error() = other.error();
+    }
+  }
+
+  constexpr expected(const Value& val) : val_(val), has_val_(true) {}
+
+  constexpr expected(const Error& err) : unex_(err), has_val_(false) {}
 
   /*Observers*/
   constexpr const Value* operator->() const noexcept {
@@ -167,34 +176,30 @@ class expected final {
   }
 
   /*Setters*/
-  template <class... Args, typename = std::enable_if_t<std::is_nothrow_constructible_v<Value, Args...>>>
-  constexpr Value& emplace(Args&&... args) noexcept {
+  template <class... Args, typename = std::enable_if_t<
+                               std::is_nothrow_constructible_v<Value, Args...>>>
+  constexpr Value& emplace(Args&&... args) noexcept {}
 
+  template <class U, class... Args>
+  constexpr Value& emplace(std::initializer_list<U> il,
+                           Args&&... args) noexcept {}
+
+  constexpr void swap(expected& other) noexcept(
+      std::is_nothrow_move_constructible_v<Value>&& std::is_nothrow_swappable_v<
+          Value>&& std::is_nothrow_move_constructible_v<Error>&&
+          std::is_nothrow_swappable_v<Error>) {
+    if (has_value() && other.has_val()) {
+      using std::swap;
+      swap(value(), other.value());
+    } else if (has_value() && !other.has_value()) {
+      /*TODO*/
+    } else if (!has_value() && has_value()) {
+      other.swap(*this);
+    } else {
+      using std::swap;
+      swap(error(), other.error());
+    }
   }
-
-  template< class U, class... Args >
-constexpr Value& emplace( std::initializer_list<U> il, Args&&... args ) noexcept{
-
-}
-
-
-
-  constexpr void swap( expected& other ) noexcept(
-    std::is_nothrow_move_constructible_v<Value> && std::is_nothrow_swappable_v<Value> &&
-    std::is_nothrow_move_constructible_v<Error> && std::is_nothrow_swappable_v<Error>
-){
-  if(has_value() && other.has_val()){
-    using std::swap;
-    swap(value(),other.value());
-  }else if(has_value() && !other.has_value()){
-    /*TODO*/
-  }else if(!has_value() && has_value()){
-    other.swap(*this);
-  }else{
-    using std::swap;
-swap(error(), other.error());
-  }
-}
 
   /*friend*/
   template <class T2, class E2,
@@ -208,25 +213,25 @@ swap(error(), other.error());
     }
   }
 
-  template< class T2 >
-friend constexpr bool operator==( const expected& x, const T2& val ){
-  return x.value() == val;
-}
+  template <class T2>
+  friend constexpr bool operator==(const expected& x, const T2& val) {
+    return x.value() == val;
+  }
 
-template< class E2 >
-friend constexpr bool operator==( const expected& x,
-                                  const unexpected<E2>& e ){
-                                    return x.error() == e.error();
-                                  }
+  template <class E2>
+  friend constexpr bool operator==(const expected& x, const unexpected<E2>& e) {
+    return x.error() == e.error();
+  }
 
-friend constexpr void swap( expected& lhs, expected& rhs ) noexcept(noexcept(lhs.swap(rhs))){
-  lhs.swap(rhs);
-}
+  friend constexpr void swap(expected& lhs,
+                             expected& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+    lhs.swap(rhs);
+  }
 
-private:
-bool has_val_;
-Value val_;
-Error unex_;
+ private:
+  bool has_val_;
+  Value val_;
+  Error unex_;
 
 };  //class expected
 

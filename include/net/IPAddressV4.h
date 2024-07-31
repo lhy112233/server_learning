@@ -8,6 +8,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -15,6 +16,7 @@
 #include "Unit.hpp"
 #include "Utility.h"
 #include "Expected_Tiny.hpp"
+#include "IPAddressV6.h"
 
 
 namespace hy {
@@ -60,16 +62,14 @@ class IPAddressV4 {
   static IPAddressV4 fromLongHBO(uint32_t ip);
 
 
-  static IPAddressV4 fromBinary(ByteArray4, bytes);
+  static IPAddressV4 fromBinary(ByteArray4 bytes);
 
   /**
    * Create a new IPAddressV4 from the provided string.
    *
    * Returns an IPAddressFormatError if the string is not a valid IP.
    */
-  template <typename, typename>
-  class Expected;
-  static Expected<IPAddressV4, IPAddressFormatError> tryFromString(
+  static expected<IPAddressV4, IPAddressFormatError> tryFromString(
       std::string_view str) noexcept;
 
   /**
@@ -84,7 +84,7 @@ class IPAddressV4 {
    * @throws IPAddressFormatException if the input is not a valid in-addr.arpa
    * representation
    */
-  static IPAddressV4 fromInverseArpaName(const std::string& arpaname);
+  static IPAddressV4 fromInverseArpaName(std::string_view arpaname);
 
   /**
    * Convert a IPv4 address string to a long, in network byte order.
@@ -100,7 +100,7 @@ class IPAddressV4 {
 
   /*Constructors*/
   IPAddressV4();
-  IPAddressV4(std::string_view addr) noexcept;
+  IPAddressV4(std::string_view addr);
   explicit IPAddressV4(const ByteArray4& addr) noexcept;
   explicit IPAddressV4(const in_addr addr) noexcept;
 
@@ -114,10 +114,9 @@ class IPAddressV4 {
 
   uint32_t toLongHBO() const { return ntohl(toLong()); }
 
-  std::string toJson() const;
+  static constexpr std::size_t bitCount() noexcept {return 32;}
 
-  /*Getters*/
-  static constexpr size_t bitCount() { return 32; }
+  std::string toJson() const;
 
   size_t hash() const ;
 
@@ -157,6 +156,35 @@ class IPAddressV4 {
 
     in_addr toAddr() const { return addr_.inAddr_; }
 
+    sockaddr_in toSockAddr() const ;
+
+    ByteArray4 toByteArray() const ;
+
+    std::string toFullQualified() const {return str();}
+
+    void toFullyQualifiedAppend(std::string& out) const;
+
+    std::uint8_t version() const noexcept {return 4;}
+
+      static ByteArray4 fetchMask(std::size_t numBits);
+
+      static CIDRNetworkV4 longestCommonPrefix(
+      const CIDRNetworkV4& one, const CIDRNetworkV4& two);
+
+        static std::size_t byteCount() noexcept { return 4; }
+    
+  bool getNthMSBit(std::size_t bitIndex) const {
+    return detail::getNthMSBitImpl(*this, bitIndex, AF_INET);
+  }
+
+    std::uint8_t getNthMSByte(std::size_t byteIndex) const;
+
+      bool getNthLSBit(std::size_t bitIndex) const;
+
+  std::uint8_t getNthLSByte(std::size_t byteIndex) const;
+
+  const unsigned char* bytes() const { return addr_.bytes_.data(); }
+
  private:
   union AddressStorage {
     static_assert(sizeof(in_addr) == sizeof(ByteArray4),
@@ -172,7 +200,7 @@ class IPAddressV4 {
 
   AddressStorage addr_;
 
-  Expected<Unit, IPAddressFormatError> trySetFromBinary(
+  expected<Unit, IPAddressFormatError> trySetFromBinary(
       ByteArray4 bytes) noexcept;
 };  // class IPAddressV4
 }  // namespace net
