@@ -6,8 +6,11 @@
 #include <type_traits>
 #include <utility>
 
+#include <cassert>
 #include "Preprocessor.h"
 #include "Traits.hpp"
+#include "Bad_expected_access.hpp"
+#include "Unexpected.hpp"
 
 // Macro
 // 用于生产异常消息常量字符串
@@ -142,8 +145,8 @@ auto doEmplaceAssign(int, T& t, Us&&... us) noexcept(
 
 /*同上*/
 template <typename T, typename... Us>
-auto doEmplaceAssign(long, T& t,
-                     Us&&... us) -> decltype(void(T(std::forward<Us>(us)...))) {
+auto doEmplaceAssign(long, T& t, Us&&... us)
+    -> decltype(void(T(std::forward<Us>(us)...))) {
   auto addr = const_cast<void*>(static_cast<const void*>(std::addressof(t)));
   t.~T();
   ::new (addr) T(std::forward<Us>(us)...);
@@ -161,7 +164,7 @@ struct ExpectedStorage {
     Value value_;
     Error error_;
     char ch_;
-  };  // union
+  };             // union
   Which which_;  // 选择标志位
 
   // 当Error能默认构造时才进行调用
@@ -239,7 +242,7 @@ struct ExpectedStorage {
   const Error&& error() const&& {
     return std::move(error_);
   }  // 没什么用的，只是为了类型完整性
-};  // struct ExpectedStorage<Value, Error, StorageType::ePODUnion>
+};   // struct ExpectedStorage<Value, Error, StorageType::ePODUnion>
 
 /*struct ExpectedStorage调用示意图*/
 // Constructor:
@@ -564,147 +567,37 @@ namespace expected_detail_ExpectedHelper {
 
 }  // namespace expected_detail
 
-/**
- * Unexpected - a helper type used to disambiguate the construction of
- * Expected objects in the error state.
- */
-template <typename Error>
-class Unexpected final {
-  /*Linit*/
-  static_assert(!std::is_reference_v<Error>, "Error must not a reference!");
-
-  /*Friend*/
-  template <typename E>
-  friend class Unexpected;
-  template <typename V, typename E>
-  friend class Expected;
-  friend struct expected_detail::expected_detail_ExpectedHelper::ExpectedHelper;
-
- public:
-  /*Constructors*/
-  Unexpected() = default;
-  Unexpected(const Unexpected&) = default;
-  Unexpected(Unexpected&&) = default;
-  Unexpected& operator=(const Unexpected&) = default;
-  Unexpected& operator=(Unexpected&&) = default;
-  constexpr Unexpected(const Error& err) : error_{err} {}
-  constexpr Unexpected(Error&& err) : error_{std::move(err)} {}
-  template <typename Other,
-            HY_REQUIRES_TRAILING(std::is_constructible_v<Error, Other&>)>
-  constexpr Unexpected(Unexpected<Other> rhs)
-      : error_{std::move(rhs.error())} {}
-
-  /*Assignment*/
-  template <typename Other,
-            HY_REQUIRES_TRAILING(std::is_assignable_v<Error&, Other&&>)>
-  Unexpected& operator=(const Unexpected<Other>& rhs) {
-    error_ = std::move(rhs.error());
-  }
-
-  template <typename Other,
-            HY_REQUIRES_TRAILING(std::is_assignable_v<Error&, Other&&>)>
-  Unexpected& operator=(const Unexpected<Other>&& rhs) {
-    error_ = std::move(rhs.error());
-  }
-
-  /*Observers*/
-  Error& error() & noexcept { return error_; }
-  const Error& error() const& noexcept { return error_; }
-  Error&& error() && noexcept { return std::move(error_); }
-  const Error&& error() const&& noexcept { return std::move(error_); }
-
- private:
-  Error error_;
-};  // class Unexpected
-
-// 判断Unexpected<Error>是否相等
-template <typename Error,
-          HY_REQUIRES_TRAILING(hy::is_equality_comparable_v<Error>)>
-inline bool operator==(const Unexpected<Error>& lhs,
-                       const Unexpected<Error>& rhs) {
-  return lhs.error() == rhs.error();
-}
-// 判断Unexpected<Error>是否不相等
-template <typename Error,
-          HY_REQUIRES_TRAILING(hy::is_equality_comparable_v<Error>)>
-inline bool operator!=(const Unexpected<Error>& lhs,
-                       const Unexpected<Error>& rhs) {
-  /*复用上式*/
-  return !(lhs == rhs);
-}
-
-// 最终构造的Unexpected的内在元素是无cv和无引用的,相当于构造器
-/*
- * 用错误代码构造Unexpected,Unexpected可在异常情况下转换为Expected
- */
-template <typename Error>
-[[nodiscard]] constexpr Unexpected<std::decay_t<Error>> makeUnexpected(
-    Error&& err) {
-  return Unexpected<std::decay_t<Error>>{std::forward<Error>(err)};
-}
-
-template <typename Error>
-class BadExpectedAccess;  /// class BadExpectedAccess声明
-
-template <>
-class BadExpectedAccess<void> : public std::exception {
- public:
-  BadExpectedAccess() noexcept =
-      default;  /// Folly在此处有explicit,但实际此explicit无作用
-  BadExpectedAccess(const BadExpectedAccess&) noexcept {}
-  BadExpectedAccess& operator=(const BadExpectedAccess&) noexcept {
-    return *this;
-  }
-
-  const char* what() const noexcept override { return "bad expected access"; }
-};  // class BadExpectedAccess<void>
-
-template <typename Error>
-class BadExpectedAccess : public BadExpectedAccess<void> {
- public:
-  explicit BadExpectedAccess(Error&& error)
-      : error_{std::forward<Error>(error)} {}
-
-  Error& error() & { return error_; }
-  Error const& error() const& { return error_; }
-  Error&& error() && { return static_cast<Error&&>(error_); }
-  Error const&& error() const&& { return static_cast<Error const&&>(error_); }
-
- private:
-  Error error_;
-};  // class BadExpectedAccess
-
 /******************由此开始都是class Expected的定义内容了*******************/
 
 /*
  * Forward declarations
  */
 template <typename Value, typename Error>
-class Expected;
+class expected;
 
 // 此处与Folly有区别,主要是模板形参顺序
 template <typename Value, typename Error>
-[[nodiscard]] constexpr Expected<std::decay_t<Error>, Value> makeExpected(
+[[nodiscard]] constexpr expected<std::decay_t<Error>, Value> makeExpected(
     Error&&);
 
 /*
- * Alias for an Expected type's associated value_type
+ * Alias for an expected type's associated value_type
  */
-template <typename Expected>
+template <typename expected>
 using ExpectedValueType =
-    typename std::remove_reference_t<Expected>::value_type;
+    typename std::remove_reference_t<expected>::value_type;
 
 /**
- * Alias for an Expected type's associated error_type
+ * Alias for an expected type's associated error_type
  */
-template <typename Expected>
+template <typename expected>
 using ExpectedErrorType =
-    typename std::remove_reference_t<Expected>::error_type;
+    typename std::remove_reference_t<expected>::error_type;
 
 template <typename Value, typename Error>
-class Expected final : expected_detail::ExpectedStorage<Value, Error> {
+class expected final : expected_detail::ExpectedStorage<Value, Error> {
   template <typename, typename>
-  friend class Expected;
+  friend class expected;
   template <typename, typename, expected_detail::StorageType>
   friend struct expected_detail::ExpectedStorage;
   friend struct expected_detail::ExpectedHelper;
@@ -716,7 +609,7 @@ class Expected final : expected_detail::ExpectedStorage<Value, Error> {
   struct MakeBadExpectedAccess {
     template <typename E>
     auto operator()(E&& e) {
-      return BadExpectedAccess<Error>(std::forward<E>(e));
+      return bad_expected_access<Error>(std::forward<E>(e));
     }
   };  // struct MakeBadExpectedAccess
 
@@ -725,52 +618,53 @@ class Expected final : expected_detail::ExpectedStorage<Value, Error> {
   using error_type = Error;
 
   template <typename U>
-  using rebind = Expected<U, Error>;
+  using rebind = expected<U, Error>;
 
   using promise_type = typename expected_detail::Promise<Value, Error>;
 
   static_assert(
       !std::is_reference_v<Value>,
-      "The Value template argument of Expected cannot be a reference type!");
+      "The Value template argument of expected cannot be a reference type!");
 
   static_assert(!std::is_abstract_v<Value>,
-                "The Value template argument of Expected cannot be an abstract "
+                "The Value template argument of expected cannot be an abstract "
                 "class type!");
 
   /*
    * Constructors
    */
   template <class B = Base, class = decltype(B{})>
-  Expected() noexcept(noexcept(B{})) : Base{} {}
-  Expected(const Expected& rhs) = default;
-  Expected(Expected&& rhs) = default;
+  expected() noexcept(noexcept(B{})) : Base{} {}
+  expected(const expected& rhs) = default;
+  expected(expected&& rhs) = default;
 
   template <typename V, typename E,
-            HY_REQUIRES_TRAILING(!std::is_same_v<Expected<V, E>, Expected> &&
+            HY_REQUIRES_TRAILING(!std::is_same_v<expected<V, E>, expected> &&
                                  std::is_constructible_v<Value, V&&> &&
                                  std::is_constructible_v<Error, E&&>)>
-  Expected(Expected<V, E> rhs) : Base{expected_detail::EmptyTag{}} {
+  expected(expected<V, E> rhs) : Base{expected_detail::EmptyTag{}} {
     this->assign(std::move(rhs));
   }
 
   template <class V, class E,
             HY_REQUIRES_TRAILING(
-                !std::is_same<Expected<V, E>, Expected>::value &&
+                !std::is_same<expected<V, E>, expected>::value &&
                 !std::is_constructible<Value, V&&>::value &&
-                std::is_constructible<Expected<Value, Error>, V&&>::value &&
+                std::is_constructible<expected<Value, Error>, V&&>::value &&
                 std::is_constructible<Error, E&&>::value)>
-  /* implicit */ Expected(Expected<V, E> rhs)
+  /* implicit */ expected(expected<V, E> rhs)
       : Base{expected_detail::EmptyTag{}} {
-    this->assign(std::move(rhs).then([](V&& v) -> Expected<Value, Error> {
-      return Expected<Value, Error>{v};
+    this->assign(std::move(rhs).then([](V&& v) -> expected<Value, Error> {
+      return expected<Value, Error>{v};
     }));
   }
 
-};  // class Expected
+};  // class expected
 
 /*NonMember functions*/
 template <typename Value, typename Error>
-constexpr Expected<std::decay<Value>, Error> makeExpected(Value&&) { /*TODO*/ }
+constexpr expected<std::decay<Value>, Error> makeExpected(Value&&) { /*TODO*/
+}
 
 }  // namespace hy
 

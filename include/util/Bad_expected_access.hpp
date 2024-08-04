@@ -30,6 +30,8 @@ class bad_expected_access : public hy::bad_expected_access<void> {
     return bad_expected_access<void>::what();
   }
 
+  
+
  private:
   E error_;
 };

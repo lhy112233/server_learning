@@ -26,9 +26,9 @@ struct is_equality_comparable
     : std::is_convertible<decltype(std::declval<T>() == std::declval<U>()),
                           bool> {};
 
-template <typename T>
+template <typename T, typename U = T>
 inline constexpr bool is_equality_comparable_v =
-    is_equality_comparable<T>::value;
+    is_equality_comparable<T, U>::value;
 
 // 判断两元素是否可以小于比较
 template <typename T, typename U = T>

@@ -1,7 +1,9 @@
 #ifndef FILE_HY_H_
 #define FILE_HY_H_
 
+#include <exception>
 #include <system_error>
+#include "Unexpected.hpp"
 #ifdef __linux__
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -9,7 +11,7 @@
 #endif //__linux__
 
 #include "ExceptionWrapper.h"
-#include "Expected.h"
+#include "Expected_Tiny.hpp"
 
 namespace hy {
 
@@ -31,11 +33,11 @@ public:
   */
 
   template <typename... Args>
-  static Expected<File, ExceptionWrapper> makeFile(Args &&...args) noexcept {
+  static expected<File, std::exception_ptr> makeFile(Args &&...args) noexcept {
     try {
       return File(std::forward<Args>(args)...);
     } catch (const std::system_error &) {
-      return makeUnexpected(ExceptionWrapper(std::current_exception()));
+      return expected<File, std::exception_ptr>{hy::unexpected<std::exception_ptr>(std::current_exception())};
     }
   }
 
