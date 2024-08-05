@@ -206,6 +206,47 @@ class ExpectedStorage {
   };
 };
 
+template <typename V, typename E>
+class ExpectedStorage<V, E, ExpectedStorageType::ePODUnion> {
+ public:
+ /*Constructors*/
+  constexpr ExpectedStorage() : has_val_{true}, val_{} {}
+  constexpr ExpectedStorage(const ExpectedStorage& other) = default;
+  constexpr ExpectedStorage(ExpectedStorage&& other) noexcept(
+      std::is_nothrow_move_constructible_v<V>&&
+          std::is_nothrow_move_constructible_v<E>) = default;
+
+  
+  /*Assignment*/
+  constexpr ExpectedStorage& operator=( const ExpectedStorage& other ) = default;
+  constexpr ExpectedStorage& operator=( ExpectedStorage&& other ) = default;
+
+
+  /*Destory*/
+  ~ExpectedStorage() = default;
+
+  /*Obserbers*/
+  constexpr const V* operator->() const noexcept{
+    return std::addressof(val_);
+  }
+
+ private:
+  bool has_val_;
+  union {
+    V val_;
+    E unex_;
+  };
+};
+
+template <typename V, typename E>
+class ExpectedStorage<V, E, ExpectedStorageType::ePODStruct> {
+ public:
+ private:
+  bool has_val_;
+  V val_;
+  E unex_;
+};
+
 }  // namespace details
 
 template <typename V, typename E>
