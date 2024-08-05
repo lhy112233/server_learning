@@ -32,6 +32,41 @@ template <typename V, typename E,
 class ExpectedStorage {
  public:
   /*Constructors*/
+  template <typename = std::enable_if_t<std::is_default_constructible_v<V>>>
+  constexpr ExpectedStorage() : has_val_(true), val_{} {}
+
+  template <typename = std::enable_if_t<!std::disjunction_v<
+                std::is_copy_constructible<V>, std::is_copy_constructible<E>>>>
+  constexpr ExpectedStorage(const ExpectedStorage& other) = delete;
+
+  template <typename is_copyable = std::enable_if_t<std::conjunction_v<
+                std::is_copy_constructible<V>, std::is_copy_constructible<E>>>,
+            typename is_trivially = std::enable_if_t<
+                std::conjunction_v<std::is_trivially_copy_constructible<V>,
+                                   std::is_trivially_copy_constructible<E>>>>
+  constexpr ExpectedStorage(const ExpectedStorage& other)
+      : has_val_(other.has_value()) {
+    if (has_value()) {
+      val_ = other.value();
+    } else {
+      unex_ = other.error();
+    }
+  }
+
+  template <typename is_copyable = std::enable_if_t<std::conjunction_v<
+                std::is_copy_constructible<V>, std::is_copy_constructible<E>>>,
+            typename is_trivially = std::enable_if_t<
+                !std::conjunction_v<std::is_trivially_copy_constructible<V>,
+                                    std::is_trivially_copy_constructible<E>>>,
+            typename...>
+  constexpr ExpectedStorage(const ExpectedStorage& other)
+      : has_val_(other.has_value()) {
+    if (has_value()) {
+      val_ = other.value();
+    } else {
+      unex_ = other.error();
+    }
+  }
 
   /*Destory*/
   ~ExpectedStorage() {
@@ -346,18 +381,20 @@ class expected final : public details::ExpectedStorage<V, E> {
   constexpr auto transform(F&& f) & {}
 
   template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::declval<E&>())>>>
+                         E, decltype(std::declval<const E&>())>>>
   constexpr auto transform(F&& f) const& {}
 
   template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<E>()))>>>
+                         E, decltype(std::move(std::declval<E&&>()))>>>
   constexpr auto transform(F&& f) && {}
 
   template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<E>()))>>>
+                         E, decltype(std::move(std::declval<const E&&>()))>>>
   constexpr auto transform(F&& f) const&& {}
 
-  template <class F>
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         V, std::add_lvalue_reference_t<std::remove_cv_t<
+                                decltype(std::declval<V>())>>>>>
   constexpr auto or_else(F&& f) & {}
 
   template <class F>
@@ -369,17 +406,29 @@ class expected final : public details::ExpectedStorage<V, E> {
   template <class F>
   constexpr auto or_else(F&& f) const&& {}
 
-  template <class F>
-  constexpr auto transform_error(F&& f) & {}
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         V, std::add_lvalue_reference_t<std::remove_cv_t<V>>>>>
+  constexpr auto transform_error(F&& f) & {
+    /*TODO*/
+  }
 
-  template <class F>
-  constexpr auto transform_error(F&& f) const& {}
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         V, std::add_lvalue_reference_t<std::remove_cv_t<V>>>>>
+  constexpr auto transform_error(F&& f) const& {
+    /*TODO*/
+  }
 
-  template <class F>
-  constexpr auto transform_error(F&& f) && {}
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         V, std::add_rvalue_reference_t<std::remove_cv_t<V>>>>>
+  constexpr auto transform_error(F&& f) && {
+    /*TODO*/
+  }
 
-  template <class F>
-  constexpr auto transform_error(F&& f) const&& {}
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         V, std::add_rvalue_reference_t<std::remove_cv_t<V>>>>>
+  constexpr auto transform_error(F&& f) const&& {
+    /*TODO*/
+  }
 
   /*Modify*/
   template <class... Args, typename = std::enable_if_t<
@@ -430,13 +479,11 @@ class expected final : public details::ExpectedStorage<V, E> {
         hy::is_equality_comparable_v<decltype(x.error()), decltype(y.error())>,
         "x.error() and y.error() cannot be compared as equal");
     static_assert(
-        std::is_convertible_v<std::decay_t<decltype(x.value() == y.value())>,
-                              bool>,
+        std::is_convertible_v<decltype(x.value() == y.value()), bool>,
         "The comparison result cannot be converted to bool type -- x.value() "
         "== y.value()");
     static_assert(
-        std::is_convertible_v<std::decay_t<decltype(x.error() == y.error())>,
-                              bool>,
+        std::is_convertible_v<decltype(x.error() == y.error()), bool>,
         "The comparison result cannot be converted to bool type -- x.error() "
         "== y.error()");
 
@@ -463,8 +510,8 @@ class expected final : public details::ExpectedStorage<V, E> {
         "x.error() and e.error() cannot be compared as equal -- x.error() == "
         "e.error()");
     static_assert(
-        std::is_convertible_v<std::decay<decltype(x.error() == e.error())>,
-                              bool>,
+        std::is_convertible_v<
+            std::remove_reference_t<decltype(x.error() == e.error())>, bool>,
         "The comparison result cannot be converted to bool type");
     return !x.has_value() && static_cast<bool>(x.error() == e.error());
   }
