@@ -74,6 +74,10 @@ class unexpected final {
   E err_;
 };
 
+struct unexpect_t { explicit unexpect_t() = default; };
+
+inline constexpr hy::unexpect_t unexpect{};
+
 }  // namespace hy
 
 #endif  //HY_UNEXPECTED_HPP_

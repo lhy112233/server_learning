@@ -1,10 +1,13 @@
 #ifndef HY_EXPECTED_HPP_
 #define HY_EXPECTED_HPP_
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include "Bad_expected_access.hpp"
+#include "Traits.hpp"
 #include "Unexpected.hpp"
+#include "Utility.h"
 
 namespace hy {
 /*details...*/
@@ -62,7 +65,7 @@ class ExpectedStorage {
     static_assert(std::is_copy_constructible_v<E>,
                   "V is unable copy construct");
     if (!has_value()) {
-      throw std::bad_expected_access(std::as_const(error()));
+      throw hy::bad_expected_access(std::as_const(error()));
     }
     return val_;
   }
@@ -71,7 +74,7 @@ class ExpectedStorage {
     static_assert(std::is_copy_constructible_v<E>,
                   "V is unable copy construct");
     if (!has_value()) {
-      throw std::bad_expected_access(std::as_const(error()));
+      throw hy::bad_expected_access(std::as_const(error()));
     }
     return val_;
   }
@@ -82,7 +85,7 @@ class ExpectedStorage {
                       std::is_constructible<E, decltype(std::move(error()))>>,
                   "V is unable move construct");
     if (!has_value()) {
-      throw std::bad_expected_access(std::move(error()));
+      throw hy::bad_expected_access(std::move(error()));
     }
     return std::move(val_);
   }
@@ -93,7 +96,7 @@ class ExpectedStorage {
                       std::is_constructible<E, decltype(std::move(error()))>>,
                   "V is unable move construct");
     if (!has_value()) {
-      throw std::bad_expected_access(std::move(error()));
+      throw hy::bad_expected_access(std::move(error()));
     }
     return std::move(val_);
   }
@@ -105,6 +108,145 @@ class ExpectedStorage {
   constexpr const E&& error() const&& noexcept { return std::move(unex_); }
 
   constexpr E&& error() && noexcept { return std::move(unex_); }
+
+  /*Swap*/
+  template <typename = std::enable_if_t<
+                std::conjunction_v<std::is_swappable<V>, std::is_swappable<E>,
+                                   std::is_move_constructible<V>,
+                                   std::is_move_constructible<E>> &&
+                std::disjunction_v<std::is_nothrow_move_constructible<V>,
+                                   std::is_nothrow_move_constructible<E>>>>
+  void swap(ExpectedStorage& other) noexcept(
+      std::is_nothrow_move_constructible_v<V>&& std::is_nothrow_swappable_v<V>&&
+          std::is_nothrow_move_constructible_v<E>&&
+              std::is_nothrow_swappable_v<E>) {
+    if (has_value() && other.has_value()) {
+
+    } else if (!has_value() && !other.has_value()) {
+      using std::swap;
+      swap(unex_, other._);
+    } else if (!has_value() && other.has_value()) {
+      other.swap(*this);
+    } else {
+      // 情况 1：非预期值的移动构造不会抛出：
+      // 在 “other.val” 构造失败的情况下会复原 “other.unex”
+      if constexpr (std::is_nothrow_move_constructible_v<E>) {
+        E temp(std::move(other.unex));
+        std::destroy_at(std::addressof(other.unex));
+        try {
+          hy::construct_at(std::addressof(other.val),
+                           std::move(val_));  // 可能会抛出异常
+          std::destroy_at(std::addressof(val_));
+          hy::construct_at(std::addressof(unex_), std::move(temp));
+        } catch (...) {
+          hy::construct_at(std::addressof(other.unex), std::move(temp));
+          throw;
+        }
+      }
+      // 情况 2：预期值的移动构造不会抛出：
+      // 在 “this->unex” 构造失败的情况下会复原 “this->val”
+      else {
+        V temp(std::move(val_));
+        std::destroy_at(std::addressof(val_));
+        try {
+          hy::construct_at(std::addressof(unex_),
+                           std::move(other.unex));  // 可能会抛出异常
+          std::destroy_at(std::addressof(other.unex));
+          hy::construct_at(std::addressof(other.val), std::move(temp));
+        } catch (...) {
+          hy::construct_at(std::addressof(val_), std::move(temp));
+          throw;
+        }
+      }
+      has_val_ = false;
+      other.has_val_ = true;
+    }
+  }
+
+ private:
+  bool has_val_;
+  union {
+    V val_;
+    E unex_;
+  };
+};
+
+}  // namespace details
+
+template <typename V, typename E>
+class expected final : public details::ExpectedStorage<V, E> {
+  using base = typename details::ExpectedStorage<V, E>;
+
+ public:
+  /*Destory*/
+  ~expected() = default;
+
+  /*Obervers*/
+  constexpr const V* operator->() const noexcept { return base::operator->(); }
+
+  constexpr V* operator->() noexcept { return base::operator->(); }
+
+  constexpr const V& operator*() const& noexcept { return base::operator*(); }
+
+  constexpr V& operator*() & noexcept { return base::operator*(); }
+
+  constexpr const V&& operator*() const&& noexcept {
+    return std::move(base::operator*());
+  }
+
+  constexpr V&& operator*() && noexcept { return std::move(base::operator*()); }
+
+  constexpr explicit operator bool() const noexcept {
+    return base::operator bool();
+  }
+
+  constexpr bool has_value() const noexcept { return base::has_value(); }
+
+  constexpr V& value() & {
+    static_assert(std::is_copy_constructible_v<E>, "");
+    if (!has_value()) {
+      throw hy::bad_expected_access(std::as_const(error()));
+    }
+    return base::value();
+  }
+
+  constexpr const V& value() const& {
+    static_assert(std::is_copy_constructible_v<E>, "");
+    if (!has_value()) {
+      throw hy::bad_expected_access(std::as_const(error()));
+    }
+    return base::value();
+  }
+
+  constexpr V&& value() && {
+    static_assert(std::conjunction_v<
+                      std::is_copy_constructible<E>,
+                      std::is_constructible<E, decltype(std::move(error()))>>,
+                  "");
+    if (!has_value()) {
+      throw hy::bad_expected_access(std::move(error()));
+    }
+    return std::move(base::value());
+  }
+
+  constexpr const V&& value() const&& {
+    static_assert(std::conjunction_v<
+                      std::is_copy_constructible<E>,
+                      std::is_constructible<E, decltype(std::move(error()))>>,
+                  "");
+    if (!has_value()) {
+      throw hy::bad_expected_access(std::move(error()));
+    }
+    return std::move(base::value());
+  }
+
+  constexpr const E& error() const& noexcept { return base::error(); }
+
+  constexpr E& error() & noexcept { return base::error(); }
+
+  constexpr const E&& error() const&& noexcept { return std::move(error()); }
+
+  constexpr E&& error() && noexcept { return std::move(error()); }
 
   template <class U>
   constexpr V value_or(U&& default_value) const& {
@@ -141,18 +283,115 @@ class ExpectedStorage {
   }
 
   /*sengial operator*/
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::declval<E&>())>>>
+  constexpr auto and_then(F&& f) & {
+    static_assert(std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
+                                     F, decltype((value()))>>::error_type,
+                                 E>,
+                  "");
+    if (has_value()) {
+      return std::invoke(std::forward<F>(f), value());
+    } else {
+      return U(hy::unexpect, error());
+    }
+  }
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::declval<const E&>())>>>
+  constexpr auto and_then(F&& f) const& {
+    static_assert(std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
+                                     F, decltype((value()))>>::error_type,
+                                 E>,
+                  "");
+    if (has_value()) {
+      return std::invoke(std::forward<F>(f), value());
+    } else {
+      return U(hy::unexpect, error());
+    }
+  }
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::move(std::declval<E&&>()))>>>
+  constexpr auto and_then(F&& f) && {
+    static_assert(
+        std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
+                           F, decltype(std::move(value()))>>::error_type,
+                       E>,
+        "");
+    if (has_value()) {
+      std::invoke(std::forward<F>(f), std::move(value()));
+    } else {
+      return U(hy::unexpect, std::move(error()));
+    }
+  }
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::move(std::declval<const E&&>()))>>>
+  constexpr auto and_then(F&& f) const&& {
+    static_assert(
+        std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
+                           F, decltype(std::move(value()))>>::error_type,
+                       E>,
+        "");
+    if (has_value()) {
+      std::invoke(std::forward<F>(f), std::move(value()));
+    } else {
+      return U(hy::unexpect, std::move(error()));
+    }
+  }
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::declval<E&>())>>>
+  constexpr auto transform(F&& f) & {}
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::declval<E&>())>>>
+  constexpr auto transform(F&& f) const& {}
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::move(std::declval<E>()))>>>
+  constexpr auto transform(F&& f) && {}
+
+  template <class F, typename = std::enable_if_t<std::is_constructible_v<
+                         E, decltype(std::move(std::declval<E>()))>>>
+  constexpr auto transform(F&& f) const&& {}
+
+  template <class F>
+  constexpr auto or_else(F&& f) & {}
+
+  template <class F>
+  constexpr auto or_else(F&& f) const& {}
+
+  template <class F>
+  constexpr auto or_else(F&& f) && {}
+
+  template <class F>
+  constexpr auto or_else(F&& f) const&& {}
+
+  template <class F>
+  constexpr auto transform_error(F&& f) & {}
+
+  template <class F>
+  constexpr auto transform_error(F&& f) const& {}
+
+  template <class F>
+  constexpr auto transform_error(F&& f) && {}
+
+  template <class F>
+  constexpr auto transform_error(F&& f) const&& {}
 
   /*Modify*/
   template <class... Args, typename = std::enable_if_t<
                                std::is_nothrow_constructible_v<V, Args...>>>
   constexpr V& emplace(Args&&... args) noexcept {
     if (has_value()) {
-      ~val_;
+      ~value();
     } else {
-      ~unex_;
+      ~error();
     }
-    return *std::construct_at(std::addressof(val_),
-                              std::forward<Args>(args)...);
+    return *hy::construct_at(std::addressof(value()),
+                             std::forward<Args>(args)...);
   }
 
   template <class U, class... Args,
@@ -160,27 +399,81 @@ class ExpectedStorage {
                 V, std::initializer_list<U>&, Args...>>>
   constexpr V& emplace(std::initializer_list<U> il, Args&&... args) noexcept {
     if (has_value()) {
-      ~val_;
+      ~value();
     } else {
-      ~unex_;
+      ~error();
     }
-    return *std::construct_at(std::addressof(val_), il,
-                              std::forward<Args>(args)...);
+    return *hy::construct_at(std::addressof(value()), il,
+                             std::forward<Args>(args)...);
   }
 
- private:
-  bool has_val_;
-  union {
-    V val_;
-    E unex_;
-  };
-};
+  template <typename = std::enable_if_t<
+                std::conjunction_v<std::is_swappable<V>, std::is_swappable<E>,
+                                   std::is_move_constructible<V>,
+                                   std::is_move_constructible<E>> &&
+                std::disjunction_v<std::is_nothrow_move_constructible<V>,
+                                   std::is_nothrow_move_constructible<E>>>>
+  constexpr void swap(expected& other) noexcept(
+      noexcept(base::swap(other.base))) {
+    base::swap(other.base);
+  }
 
-}  // namespace details
+  /*Friends*/
+  template <class T2, class E2,
+            typename = std::enable_if_t<!std::is_void_v<T2>>>
+  friend constexpr bool operator==(const expected& x,
+                                   const expected<T2, E2>& y) {
+    static_assert(
+        hy::is_equality_comparable_v<decltype(x.value()), decltype(y.value())>,
+        "x.value() and y.value() cannot be compared as equal");
+    static_assert(
+        hy::is_equality_comparable_v<decltype(x.error()), decltype(y.error())>,
+        "x.error() and y.error() cannot be compared as equal");
+    static_assert(
+        std::is_convertible_v<std::decay_t<decltype(x.value() == y.value())>,
+                              bool>,
+        "The comparison result cannot be converted to bool type -- x.value() "
+        "== y.value()");
+    static_assert(
+        std::is_convertible_v<std::decay_t<decltype(x.error() == y.error())>,
+                              bool>,
+        "The comparison result cannot be converted to bool type -- x.error() "
+        "== y.error()");
 
-template <typename V, typename E>
-class expected final : public details::ExpectedStorage<V, E> {
- public:
+    return x.has_value() ? (y.has_value() && *x == *y)
+                         : (!y.has_value() && x.error() == y.error());
+  }
+
+  template <class T2>
+  friend constexpr bool operator==(const expected& x, const T2& val) {
+    static_assert(
+        hy::is_equality_comparable_v<decltype(x.value()), decltype(val)>,
+        "x.value() and val cannot be compared as equal");
+    static_assert(
+        std::is_convertible_v<std::decay_t<decltype(x.value() == val)>, bool>,
+        "The comparison result cannot be converted to bool type -- x.value() "
+        "== val");
+    return x.has_value() && static_cast<bool>(*x == val);
+  }
+
+  template <class E2>
+  friend constexpr bool operator==(const expected& x, const unexpected<E2>& e) {
+    static_assert(
+        hy::is_equality_comparable_v<decltype(x.error()), decltype(e.error())>,
+        "x.error() and e.error() cannot be compared as equal -- x.error() == "
+        "e.error()");
+    static_assert(
+        std::is_convertible_v<std::decay<decltype(x.error() == e.error())>,
+                              bool>,
+        "The comparison result cannot be converted to bool type");
+    return !x.has_value() && static_cast<bool>(x.error() == e.error());
+  }
+
+  friend constexpr auto swap(expected& lhs,
+                             expected& rhs) noexcept(noexcept(lhs.swap(rhs)))
+      -> decltype(lhs.swap(rhs)) {
+    lhs.swap(rhs);
+  }
 };
 
 }  //namespace hy

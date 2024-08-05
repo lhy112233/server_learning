@@ -5,6 +5,7 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include "Preprocessor.h"
 #include <string.h>
 
 namespace hy {
@@ -20,5 +21,24 @@ void MemZero(T &obj, std::size_t size = Size) noexcept {
   } /// 明示后条件,确保memset不被编译器优化掉
 #endif //__STDC_LIB_EXT1__
 } // MemZero
+
+
+
+
+
+
+
+
+#if __cplusplus < CPP20
+template< class T, class... Args >
+constexpr T* construct_at( T* p, Args&&... args ){
+    return ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...);
+}
+
+#endif  //CPP17
+
+
+
+
 } // namespace hy
 #endif // UTILITY_H_
