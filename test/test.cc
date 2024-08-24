@@ -8,23 +8,26 @@
 #include <vector>
 #include <iostream>
 
-    template<typename T, typename = std::enable_if_t<std::is_same_v<int, std::remove_cv_t<T>>>>
-    void testFun(T i){
-        std::cout << "Fun_1\n";
+template<typename T>
+struct A{
+    // template<typename U = T ,typename = std::enable_if_t<std::is_same_v<U, int>>>
+    // void fun(double){
+    //     std::cerr << "fun_1\n";
+    // }
+
+    template<typename U = T, typename = std::enable_if_t<!std::is_same_v<int, U>>>
+    void fun(int,...){
+        std::cerr << "fun_2\n";
     }
 
-    template<typename T, typename = std::enable_if_t<!std::is_same_v<int, std::remove_cv_t<T>>>, typename...>
-    void testFun(T i){
-        std::cout << "Fun_2\n";
-    }
+};
 
-    void testFun(int i, ...){
-        std::cout << "Fun_3\n";
-    }
+    template<typename = void, typename...>
+    void fun(){std::cerr << "Fun_1\n";}
+
+    template<typename = void>
+    void fun(){std::cerr << "Fun_2\n";}
+
 
 int main() {
-
-testFun(1);
-testFun("a");
-
 }

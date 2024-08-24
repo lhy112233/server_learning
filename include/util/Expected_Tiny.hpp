@@ -34,8 +34,6 @@ template <typename T>
 inline constexpr bool is_unexpected_specialization_v =
     is_unexpected_specialization<T>::value;
 
-template <typename T, typename U, typename = void>
-struct is_no_expected_if_T_no_bool : std::false_type {};
 
 enum class ExpectedStorageType {
   ePODStruct,
@@ -865,11 +863,16 @@ class expected final : public details::ExpectedStorage<V, E> {
  public:
   /*Constructors*/
   /*1*/
-  template <typename = std::enable_if_t<std::is_default_constructible_v<V>>>
+  template <typename Vt = V,
+            typename = std::enable_if_t<std::is_default_constructible_v<Vt>>>
   expected() : details::ExpectedStorage<V, E>{} {}
 
   /*2*/
-  template <typename = void, typename...>
+  template <
+      typename Vt = V, typename Et = E,
+      typename = std::enable_if_t<!std::conjunction_v<
+          std::is_copy_constructible<Vt>, std::is_copy_constructible<Et>>>,
+      typename...>
   expected(const expected& rhs) = delete;
 
   template <
@@ -879,11 +882,17 @@ class expected final : public details::ExpectedStorage<V, E> {
   expected(const expected& rhs) : details::ExpectedStorage<V, E>{rhs} {}
 
   /*3*/
-  template <typename = void, typename...>
+  template <
+      typename Vt = V, typename Et = E,
+      typename = std::enable_if_t<!std::conjunction_v<
+          std::is_move_constructible<Vt>, std::is_move_constructible<Et>>>,
+      typename...>
   expected(expected&& rhs) = delete;
 
-  template <typename = std::enable_if_t<std::conjunction_v<
-                std::is_move_constructible<V>, std::is_move_constructible<E>>>>
+  template <
+      typename Vt = V, typename Et = E,
+      typename = std::enable_if_t<std::conjunction_v<
+          std::is_move_constructible<Vt>, std::is_move_constructible<Et>>>>
   expected(expected&& rhs) noexcept(
       noexcept(std::is_nothrow_move_constructible_v<V>&&
                    std::is_nothrow_move_constructible_v<E>))
@@ -891,7 +900,7 @@ class expected final : public details::ExpectedStorage<V, E> {
 
   /*4*/
   template <
-      typename U, typename G,
+      typename U, typename G, typename Vt = V,
       typename = std::enable_if_t<
           std::conjunction_v<std::is_constructible<V, const U&>,
                              std::is_constructible<E, const G&>> &&
@@ -902,13 +911,13 @@ class expected final : public details::ExpectedStorage<V, E> {
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>>> &&
-          std::is_same_v<bool, std::remove_cv_t<V>>>,
+          std::is_same_v<bool, std::remove_cv_t<Vt>>>,
       typename...>
   constexpr expected(const expected<U, G>& other)
       : details::ExpectedStorage<V, E>{other} {}
 
   template <
-      typename U, typename G,
+      typename U, typename G, typename Vt = V,
       typename = std::enable_if_t<
           std::conjunction_v<std::is_constructible<V, const U&>,
                              std::is_constructible<E, const G&>> &&
@@ -919,7 +928,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>>> &&
-          !std::is_same_v<bool, std::remove_cv_t<V>> &&
+          !std::is_same_v<bool, std::remove_cv_t<Vt>> &&
           !std::disjunction_v<
               std::is_constructible<V, hy::expected<U, G>&>,
               std::is_constructible<V, hy::expected<U, G>>,
@@ -934,7 +943,7 @@ class expected final : public details::ExpectedStorage<V, E> {
 
   /*5*/
   template <
-      class U, class G,
+      class U, class G, typename Vt = V,
       typename = std::enable_if_t<
           std::conjunction_v<std::is_constructible<V, U>,
                              std::is_constructible<E, G>> &&
@@ -945,13 +954,13 @@ class expected final : public details::ExpectedStorage<V, E> {
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>>> &&
-          std::is_same_v<bool, std::remove_cv_t<V>>>,
+          std::is_same_v<bool, std::remove_cv_t<Vt>>>,
       typename...>
   constexpr expected(expected<U, G>&& other)
       : details::ExpectedStorage<V, E>{std::move(other)} {}
 
   template <
-      class U, class G,
+      class U, class G, typename Vt = V,
       typename = std::enable_if_t<
           std::conjunction_v<std::is_constructible<V, U>,
                              std::is_constructible<E, G>> &&
@@ -962,7 +971,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>>> &&
-          !std::is_same_v<bool, std::remove_cv_t<V>> &&
+          !std::is_same_v<bool, std::remove_cv_t<Vt>> &&
           !std::disjunction_v<
               std::is_constructible<V, hy::expected<U, G>&>,
               std::is_constructible<V, hy::expected<U, G>>,
@@ -976,7 +985,7 @@ class expected final : public details::ExpectedStorage<V, E> {
       : details::ExpectedStorage<V, E>{std::move(other)} {}
 
   /*6*/
-  template <class U = V,
+  template <class U = V, typename Vt = V,
             typename = std::enable_if_t<
                 !std::is_same_v<hy::remove_cvref_t<U>, std::in_place_t> &&
                 !std::is_same_v<hy::expected<V, E>, hy::remove_cvref_t<U>> &&
@@ -986,11 +995,12 @@ class expected final : public details::ExpectedStorage<V, E> {
   constexpr expected(U&& v)
       : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
 
-  template <class U = V,
+  template <class U = V, typename Vt = V,
             typename = std::enable_if_t<
                 !std::is_same_v<hy::remove_cvref_t<U>, std::in_place_t> &&
                 !std::is_same_v<hy::expected<V, E>, hy::remove_cvref_t<U>> &&
-                std::is_constructible_v<V, U> && !std::is_convertible_v<U, V>>>
+                std::is_constructible_v<V, U> && !std::is_convertible_v<U, V> &&
+                !details::is_unexpected_specialization_v<U> /*&&*/ >> 
   constexpr explicit expected(U&& v)
       : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
 
@@ -1035,7 +1045,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                 std::is_constructible_v<V, std::initializer_list<U>&, Args...>>>
   constexpr explicit expected(std::in_place_t, std::initializer_list<U> il,
                               Args&&... args)
-      : details::ExpectedStorage<V, E>{std::in_place, std::move(il),
+      : details::ExpectedStorage<V, E>{std::in_place, il,
                                        std::forward<Args>(args)...} {}
 
   /*11*/
@@ -1050,7 +1060,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                 std::is_constructible_v<E, std::initializer_list<U>&, Args...>>>
   constexpr explicit expected(hy::unexpect_t, std::initializer_list<U> il,
                               Args&&... args)
-      : details::ExpectedStorage<V, E>{unexpect, std::move(il),
+      : details::ExpectedStorage<V, E>{unexpect, il,
                                        std::forward<Args>(args)...} {}
 
   /*Destory*/
@@ -1160,13 +1170,15 @@ class expected final : public details::ExpectedStorage<V, E> {
   }
 
   /*sengial operator*/
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::declval<E&>())>>>
+  template <class F, typename Et = E,
+            typename = std::enable_if_t<
+                std::is_constructible_v<Et, decltype(std::declval<Et&>())>>>
   constexpr auto and_then(F&& f) & {
     static_assert(std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
                                      F, decltype((value()))>>::error_type,
                                  E>,
                   "");
+    using U = hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), value());
     } else {
@@ -1174,13 +1186,15 @@ class expected final : public details::ExpectedStorage<V, E> {
     }
   }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::declval<const E&>())>>>
+  template <class F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                Et, decltype(std::declval<const Et&>())>>>
   constexpr auto and_then(F&& f) const& {
     static_assert(std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
                                      F, decltype((value()))>>::error_type,
                                  E>,
                   "");
+    using U = hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), value());
     } else {
@@ -1188,98 +1202,174 @@ class expected final : public details::ExpectedStorage<V, E> {
     }
   }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<E&&>()))>>>
+  template <class F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                Et, decltype(std::move(std::declval<Et&&>()))>>>
   constexpr auto and_then(F&& f) && {
     static_assert(
         std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
                            F, decltype(std::move(value()))>>::error_type,
                        E>,
         "");
+    using U = hy::remove_cvref_t<
+        std::invoke_result_t<F, decltype(std::move(value()))>>;
     if (has_value()) {
-      std::invoke(std::forward<F>(f), std::move(value()));
+      return std::invoke(std::forward<F>(f), std::move(value()));
     } else {
       return U(hy::unexpect, std::move(error()));
     }
   }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<const E&&>()))>>>
+  template <typename F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                Et, decltype(std::move(std::declval<const Et&&>()))>>>
   constexpr auto and_then(F&& f) const&& {
     static_assert(
         std::is_same_v<typename remove_cvref_t<std::invoke_result_t<
                            F, decltype(std::move(value()))>>::error_type,
                        E>,
         "");
+    using U = hy::remove_cvref_t<
+        std::invoke_result_t<F, decltype(std::move(value()))>>;
     if (has_value()) {
-      std::invoke(std::forward<F>(f), std::move(value()));
+      return std::invoke(std::forward<F>(f), std::move(value()));
     } else {
       return U(hy::unexpect, std::move(error()));
     }
   }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::declval<E&>())>>>
-  constexpr auto transform(F&& f) & {}
+  template <typename F, typename Et = E,
+            typename = std::enable_if_t<
+                std::is_constructible_v<Et, decltype(std::declval<Et&>())>>>
+  constexpr auto transform(F&& f) & {
+    using U = std::remove_cv_t<std::invoke_result_t<F, decltype((value()))>>;
+    if(has_value()){
+      if(std::is_void_v<typename Tp>)
+    }else {
+    return hy::expected<U, E>(hy::unexpect, error());
+    }
+  }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::declval<const E&>())>>>
-  constexpr auto transform(F&& f) const& {}
+  template <typename F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                Et, decltype(std::declval<const Et&>())>>>
+  constexpr auto transform(F&& f) const& {
+    using U = std::remove_cv_t<std::invoke_result_t<F, decltype((value()))>>;
+  }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<E&&>()))>>>
-  constexpr auto transform(F&& f) && {}
+  template <typename F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                Et, decltype(std::move(std::declval<Et&&>()))>>>
+  constexpr auto transform(F&& f) && {
+    using U = std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+  }
 
-  template <class F, typename = std::enable_if_t<std::is_constructible_v<
-                         E, decltype(std::move(std::declval<const E&&>()))>>>
-  constexpr auto transform(F&& f) const&& {}
+  template <typename F, typename Et = E,
+            typename = std::enable_if_t<std::is_constructible_v<
+                E, decltype(std::move(std::declval<const E&&>()))>>>
+  constexpr auto transform(F&& f) const&& {
+    using U = std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+  }
 
-  template <class F, typename Vt = V,
+  template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
                 Vt, std::add_lvalue_reference_t<
                         std::remove_cv_t<decltype(std::declval<Vt>())>>>>>
-  constexpr auto or_else(F&& f) & {}
+  constexpr auto or_else(F&& f) & {
+    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    if (has_value()) {
+
+    } else {
+      return;
+    }
+  }
 
   template <class F>
-  constexpr auto or_else(F&& f) const& {}
+  constexpr auto or_else(F&& f) const& {
+    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    if (has_value()) {
+
+    } else {
+    }
+  }
 
   template <class F>
-  constexpr auto or_else(F&& f) && {}
+  constexpr auto or_else(F&& f) && {
+    using G = hy::remove_cvref_t<
+        std::invoke_result_t<F, decltype(std::move(error()))>>;
+    if (has_value()) {
 
-  template <class F>
-  constexpr auto or_else(F&& f) const&& {}
+    } else {
+    }
+  }
 
-  template <class F, typename Vt = V,
+  template <typename F>
+  constexpr auto or_else(F&& f) const&& {
+    using G = hy::remove_cvref_t<
+        std::invoke_result_t<F, decltype(std::move(error()))>>;
+    if (has_value()) {
+
+    } else {
+    }
+  }
+
+  template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
                 Vt, std::add_lvalue_reference_t<std::remove_cv_t<Vt>>>>>
   constexpr auto transform_error(F&& f) & {
-    /*TODO*/
+    using G = std::remove_cv_t<std::invoke_result_t<F, decltype(error())>>;
+    if (has_value()) {
+      return hy::expected<V, G>(std::in_place, value());
+    } else {
+      return hy::expected<V, G>(hy::unexpect,
+                                std::invoke(std::forward<F>(f), error()));
+    }
   }
 
-  template <class F, typename Vt = V,
+  template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
                 Vt, std::add_lvalue_reference_t<std::remove_cv_t<Vt>>>>>
   constexpr auto transform_error(F&& f) const& {
-    /*TODO*/
+    using G = std::remove_cv_t<std::invoke_result_t<F, decltype(error())>>;
+    if (has_value()) {
+      return hy::expected<V, G>(std::in_place, value());
+    } else {
+      return hy::expected<V, G>(hy::unexpect,
+                                std::invoke(std::forward<F>(f), error()));
+    }
   }
 
-  template <class F, typename Vt = V,
+  template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
                 Vt, std::add_rvalue_reference_t<std::remove_cv_t<Vt>>>>>
   constexpr auto transform_error(F&& f) && {
-    /*TODO*/
+    using G =
+        std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(error()))>>;
+    if (has_value()) {
+      return hy::expected<V, G>(std::in_place, std::move(value()));
+    } else {
+      return hy::expected<V, G>(
+          hy::unexpect, std::invoke(std::forward<F>(f), std::move(error())));
+    }
   }
 
-  template <class F, typename Vt = V,
+  template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
                 Vt, std::add_rvalue_reference_t<std::remove_cv_t<Vt>>>>>
   constexpr auto transform_error(F&& f) const&& {
-    /*TODO*/
+    using G =
+        std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(error()))>>;
+    if (has_value()) {
+      return hy::expected<V, G>(std::in_place, std::move(value()));
+    } else {
+      return hy::expected<V, G>(
+          hy::unexpect, std::invoke(std::forward<F>(f), std::move(error())));
+    }
   }
 
   /*Modify*/
-  template <class... Args, typename = std::enable_if_t<
-                               std::is_nothrow_constructible_v<V, Args...>>>
+  template <typename... Args, typename = std::enable_if_t<
+                                  std::is_nothrow_constructible_v<V, Args...>>>
   constexpr V& emplace(Args&&... args) noexcept {
     if (has_value()) {
       ~value();
@@ -1290,7 +1380,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                              std::forward<Args>(args)...);
   }
 
-  template <class U, class... Args,
+  template <typename U, typename... Args,
             typename = std::enable_if_t<std::is_nothrow_constructible_v<
                 V, std::initializer_list<U>&, Args...>>>
   constexpr V& emplace(std::initializer_list<U> il, Args&&... args) noexcept {
