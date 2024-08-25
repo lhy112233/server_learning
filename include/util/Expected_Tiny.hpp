@@ -34,7 +34,6 @@ template <typename T>
 inline constexpr bool is_unexpected_specialization_v =
     is_unexpected_specialization<T>::value;
 
-
 enum class ExpectedStorageType {
   ePODStruct,
   ePODUnion,
@@ -283,6 +282,7 @@ class ExpectedStorage {
       : has_val_(false), unex_{il, std::forward<Args>(args)...} {}
 
   /*Assignment*/
+
 
   /*Destory*/
   ~ExpectedStorage() {
@@ -861,6 +861,15 @@ class expected final : public details::ExpectedStorage<V, E> {
   using base = typename details::ExpectedStorage<V, E>;
 
  public:
+  /*Type members*/
+  using value_type = V;
+  using error_type = E;
+  using unexpected_type = hy::unexpected<E>;
+
+  /*Member alias templates*/
+  template <typename U>
+  using rebind = hy::expected<U, error_type>;
+
   /*Constructors*/
   /*1*/
   template <typename Vt = V,
@@ -1000,7 +1009,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                 !std::is_same_v<hy::remove_cvref_t<U>, std::in_place_t> &&
                 !std::is_same_v<hy::expected<V, E>, hy::remove_cvref_t<U>> &&
                 std::is_constructible_v<V, U> && !std::is_convertible_v<U, V> &&
-                !details::is_unexpected_specialization_v<U> /*&&*/ >> 
+                !details::is_unexpected_specialization_v<U> /*&&*/>>
   constexpr explicit expected(U&& v)
       : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
 
@@ -1067,6 +1076,34 @@ class expected final : public details::ExpectedStorage<V, E> {
   ~expected() = default;
 
   /*Assignments*/
+  constexpr expected& operator=(const expected& other) {
+    base::operator=(other);
+    return *this;
+  }
+
+  constexpr expected& operator=(expected&& other) noexcept(
+      noexcept(base::operator=(std::move(other)))) {
+    base::operator=(std::move(other));
+    return *this;
+  }
+
+  template <class U = V>
+  constexpr expected& operator=(U&& v) {
+    base::operator=(std::move(v));
+    return *this;
+  }
+
+  template <class G>
+  constexpr expected& operator=(const hy::unexpected<G>& e) {
+    base::operator=(e);
+    return *this;
+  }
+
+  template <class G>
+  constexpr expected& operator=(hy::unexpected<G>&& e) {
+    base::operator=(std::move(e));
+    return *this;
+  }
 
   /*Obervers*/
   constexpr const V* operator->() const noexcept { return base::operator->(); }
@@ -1243,10 +1280,16 @@ class expected final : public details::ExpectedStorage<V, E> {
                 std::is_constructible_v<Et, decltype(std::declval<Et&>())>>>
   constexpr auto transform(F&& f) & {
     using U = std::remove_cv_t<std::invoke_result_t<F, decltype((value()))>>;
-    if(has_value()){
-      if(std::is_void_v<typename Tp>)
-    }else {
-    return hy::expected<U, E>(hy::unexpect, error());
+    if (has_value()) {
+      if constexpr (std::is_void_v<U>) {
+        std::invoke(std::forward<F>(f), value());
+        return hy::expected<U, E>();
+      } else {
+        return hy::expected<U, E>(std::in_place,
+                                  std::invoke(std::forward<F>(f), value()));
+      }
+    } else {
+      return hy::expected<U, E>(hy::unexpect, error());
     }
   }
 
@@ -1255,61 +1298,108 @@ class expected final : public details::ExpectedStorage<V, E> {
                 Et, decltype(std::declval<const Et&>())>>>
   constexpr auto transform(F&& f) const& {
     using U = std::remove_cv_t<std::invoke_result_t<F, decltype((value()))>>;
+    if (has_value()) {
+      if constexpr (std::is_void_v<U>) {
+        std::invoke(std::forward<F>(f), value());
+        return hy::expected<U, E>();
+      } else {
+        return hy::expected<U, E>(std::in_place,
+                                  std::invoke(std::forward<F>(f), value()));
+      }
+    } else {
+      return hy::expected<U, E>(hy::unexpect, error());
+    }
   }
 
   template <typename F, typename Et = E,
             typename = std::enable_if_t<std::is_constructible_v<
                 Et, decltype(std::move(std::declval<Et&&>()))>>>
   constexpr auto transform(F&& f) && {
-    using U = std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+    using U =
+        std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+    if (has_value()) {
+      if constexpr (std::is_void_v<U>) {
+        std::invoke(std::forward<F>(f), std::move(value()));
+        return hy::expected<U, E>();
+      } else {
+        return hy::expected<U, E>(
+            std::in_place, std::invoke(std::forward<F>(f), std::move(value())));
+      }
+    } else {
+      return hy::expected<U, E>(hy::unexpect, std::move(error()));
+    }
   }
 
   template <typename F, typename Et = E,
             typename = std::enable_if_t<std::is_constructible_v<
                 E, decltype(std::move(std::declval<const E&&>()))>>>
   constexpr auto transform(F&& f) const&& {
-    using U = std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+    using U =
+        std::remove_cv_t<std::invoke_result_t<F, decltype(std::move(value()))>>;
+    if (has_value()) {
+      if constexpr (std::is_void_v<U>) {
+        std::invoke(std::forward<F>(f), std::move(value()));
+        return hy::expected<U, E>();
+      } else {
+        return hy::expected<U, E>(
+            std::in_place, std::invoke(std::forward<F>(f), std::move(value())));
+      }
+    } else {
+      return hy::expected<U, E>(hy::unexpect, std::move(error()));
+    }
+  }
+
+  template <typename F, typename Vt = V,
+            typename = std::enable_if_t<
+                std::is_constructible_v<V, decltype((std::declval<Vt&>()))>>>
+  constexpr auto or_else(F&& f) & {
+    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    static_assert(std::is_same_v<typename G::value_type, V>, "");
+    if (has_value()) {
+      return G(std::in_place, value());
+    } else {
+      return std::invoke(std::forward<F>(f), error());
+    }
+  }
+
+  template <class F, typename Vt = V,
+            typename = std::enable_if_t<
+                std::is_constructible_v<V, decltype((std::declval<Vt&>()))>>>
+  constexpr auto or_else(F&& f) const& {
+    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    static_assert(std::is_same_v<typename G::value_type, V>, "");
+    if (has_value()) {
+      return G(std::in_place, value());
+    } else {
+      return std::invoke(std::forward<F>(f), error());
+    }
+  }
+
+  template <class F, typename Vt = V,
+            typename = std::enable_if_t<std::is_constructible_v<
+                V, decltype(std::move(std::declval<Vt&>()))>>>
+  constexpr auto or_else(F&& f) && {
+    using G = hy::remove_cvref_t<
+        std::invoke_result_t<F, decltype(std::move(error()))>>;
+    static_assert(std::is_same_v<typename G::value_type, V>, "");
+    if (has_value()) {
+      return G(std::in_place, std::move(value()));
+    } else {
+      return std::invoke(std::forward<F>(f), std::move(error()));
+    }
   }
 
   template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
-                Vt, std::add_lvalue_reference_t<
-                        std::remove_cv_t<decltype(std::declval<Vt>())>>>>>
-  constexpr auto or_else(F&& f) & {
-    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
-    if (has_value()) {
-
-    } else {
-      return;
-    }
-  }
-
-  template <class F>
-  constexpr auto or_else(F&& f) const& {
-    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
-    if (has_value()) {
-
-    } else {
-    }
-  }
-
-  template <class F>
-  constexpr auto or_else(F&& f) && {
-    using G = hy::remove_cvref_t<
-        std::invoke_result_t<F, decltype(std::move(error()))>>;
-    if (has_value()) {
-
-    } else {
-    }
-  }
-
-  template <typename F>
+                V, decltype(std::move(std::declval<Vt&>()))>>>
   constexpr auto or_else(F&& f) const&& {
     using G = hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(error()))>>;
+    static_assert(std::is_same_v<typename G::value_type, V>, "");
     if (has_value()) {
-
+      return G(std::in_place, std::move(value()));
     } else {
+      return std::invoke(std::forward<F>(f), std::move(error()));
     }
   }
 
