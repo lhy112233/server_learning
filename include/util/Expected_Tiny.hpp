@@ -1,5 +1,9 @@
 #ifndef HY_EXPECTED_HPP_
 #define HY_EXPECTED_HPP_
+#ifdef __cpp_lib_expected
+static_assert(false, "Please use C++23 std::expected!");
+#endif  //__cpp_lib_expected
+
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -282,7 +286,6 @@ class ExpectedStorage {
       : has_val_(false), unex_{il, std::forward<Args>(args)...} {}
 
   /*Assignment*/
-
 
   /*Destory*/
   ~ExpectedStorage() {
@@ -702,19 +705,31 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODStruct> {  //ePODStruct
     }
   }
 
+  /*12/*/
+  template <class U, class... Args,
+            std::enable_if_t<
+                std::is_constructible_v<E, std::initializer_list<U>&, Args...>>>
+  constexpr explicit ExpectedStorage(hy::unexpect_t,
+                                     std::initializer_list<U> il,
+                                     Args&&... args)
+      : unex_{il, std::forward<Args>(args)...}, has_val_{false} {}
+
   /*Assignment*/
   constexpr ExpectedStorage& operator=(const ExpectedStorage& other) = default;
   constexpr ExpectedStorage& operator=(ExpectedStorage&& other) noexcept =
       default;
 
-  template <class U = V,
-            typename = std::enable_if_t<
-                !std::is_same_v<ExpectedStorage, hy::remove_cvref_t<U>> &&
-                std::conjunction_v<
-                    std::is_constructible<V, U>, std::is_assignable<V&, U>,
-                    std::disjunction<std::is_nothrow_constructible<V, U>,
-                                     std::is_nothrow_move_constructible<V>,
-                                     std::is_nothrow_move_constructible<E>>>>>
+  template <
+      class U = V,
+      typename = std::enable_if_t<std::conjunction_v<
+          std::negation<std::is_same<ExpectedStorage, hy::remove_cvref_t<U>>>,
+          std::negation<
+              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+          std::conjunction<
+              std::is_constructible<V, U>, std::is_assignable<V&, U>,
+              std::disjunction<std::is_nothrow_constructible<V, U>,
+                               std::is_nothrow_move_constructible<V>,
+                               std::is_nothrow_move_constructible<E>>>>>>
   constexpr ExpectedStorage& operator=(U&& v) {
     if (has_value()) {
       val_ = std::forward<U>(v);
@@ -874,7 +889,7 @@ class expected final : public details::ExpectedStorage<V, E> {
   /*1*/
   template <typename Vt = V,
             typename = std::enable_if_t<std::is_default_constructible_v<Vt>>>
-  expected() : details::ExpectedStorage<V, E>{} {}
+  constexpr expected() : details::ExpectedStorage<V, E>{} {}
 
   /*2*/
   template <
@@ -882,13 +897,14 @@ class expected final : public details::ExpectedStorage<V, E> {
       typename = std::enable_if_t<!std::conjunction_v<
           std::is_copy_constructible<Vt>, std::is_copy_constructible<Et>>>,
       typename...>
-  expected(const expected& rhs) = delete;
+  constexpr expected(const expected& rhs) = delete;
 
   template <
       typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
           std::is_copy_constructible<Vt>, std::is_copy_constructible<Et>>>>
-  expected(const expected& rhs) : details::ExpectedStorage<V, E>{rhs} {}
+  constexpr expected(const expected& rhs)
+      : details::ExpectedStorage<V, E>{rhs} {}
 
   /*3*/
   template <
@@ -910,134 +926,164 @@ class expected final : public details::ExpectedStorage<V, E> {
   /*4*/
   template <
       typename U, typename G, typename Vt = V,
-      typename = std::enable_if_t<
-          std::conjunction_v<std::is_constructible<V, const U&>,
-                             std::is_constructible<E, const G&>> &&
-          !std::disjunction_v<
+      typename = std::enable_if_t<std::conjunction_v<
+          std::conjunction<std::is_constructible<V, const U&>,
+                           std::is_constructible<E, const G&>>,
+          std::negation<std::disjunction<
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
-                                    const hy::expected<U, G>>> &&
-          std::is_same_v<bool, std::remove_cv_t<Vt>>>,
+                                    const hy::expected<U, G>>>>,
+          std::disjunction<
+              std::is_same<bool, std::remove_cv_t<Vt>>,
+              std::conjunction<
+                  std::negation<std::is_same<bool, std::remove_cv_t<Vt>>>,
+                  std::negation<std::disjunction<
+                      std::is_constructible<V, hy::expected<U, G>&>,
+                      std::is_constructible<V, hy::expected<U, G>>,
+                      std::is_constructible<V, const hy::expected<U, G>&>,
+                      std::is_constructible<V, const hy::expected<U, G>>,
+                      std::is_convertible<hy::expected<U, G>&, V>,
+                      std::is_convertible<hy::expected<U, G>, V>,
+                      std::is_convertible<const hy::expected<U, G>&, V>,
+                      std::is_convertible<const hy::expected<U, G>, V>>>>>>>,
+      typename = std::enable_if_t<std::conjunction_v<
+          std::is_convertible<const U&, V>, std::is_convertible<const G&, E>>>,
       typename...>
   constexpr expected(const expected<U, G>& other)
       : details::ExpectedStorage<V, E>{other} {}
 
   template <
       typename U, typename G, typename Vt = V,
-      typename = std::enable_if_t<
-          std::conjunction_v<std::is_constructible<V, const U&>,
-                             std::is_constructible<E, const G&>> &&
-          !std::disjunction_v<
+      typename = std::enable_if_t<std::conjunction_v<
+          std::conjunction<std::is_constructible<V, const U&>,
+                           std::is_constructible<E, const G&>>,
+          std::negation<std::disjunction<
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
-                                    const hy::expected<U, G>>> &&
-          !std::is_same_v<bool, std::remove_cv_t<Vt>> &&
-          !std::disjunction_v<
-              std::is_constructible<V, hy::expected<U, G>&>,
-              std::is_constructible<V, hy::expected<U, G>>,
-              std::is_constructible<V, const hy::expected<U, G>&>,
-              std::is_constructible<V, const hy::expected<U, G>>,
-              std::is_convertible<hy::expected<U, G>&, V>,
-              std::is_convertible<hy::expected<U, G>, V>,
-              std::is_convertible<const hy::expected<U, G>&, V>,
-              std::is_convertible<const hy::expected<U, G>, V>>>>
-  constexpr expected(const expected<U, G>& other)
+                                    const hy::expected<U, G>>>>,
+          std::disjunction<
+              std::is_same<bool, std::remove_cv_t<Vt>>,
+              std::conjunction<
+                  std::negation<std::is_same<bool, std::remove_cv_t<Vt>>>,
+                  std::negation<std::disjunction<
+                      std::is_constructible<V, hy::expected<U, G>&>,
+                      std::is_constructible<V, hy::expected<U, G>>,
+                      std::is_constructible<V, const hy::expected<U, G>&>,
+                      std::is_constructible<V, const hy::expected<U, G>>,
+                      std::is_convertible<hy::expected<U, G>&, V>,
+                      std::is_convertible<hy::expected<U, G>, V>,
+                      std::is_convertible<const hy::expected<U, G>&, V>,
+                      std::is_convertible<const hy::expected<U, G>, V>>>>>>>,
+      typename = std::enable_if_t<std::negation_v<std::conjunction<
+          std::is_convertible<const U&, V>, std::is_convertible<const G&, E>>>>>
+  constexpr explicit expected(const expected<U, G>& other)
       : details::ExpectedStorage<V, E>{other} {}
 
   /*5*/
   template <
       class U, class G, typename Vt = V,
-      typename = std::enable_if_t<
-          std::conjunction_v<std::is_constructible<V, U>,
-                             std::is_constructible<E, G>> &&
-          !std::disjunction_v<
+      typename = std::enable_if_t<std::conjunction_v<
+          std::conjunction<std::is_constructible<V, U>,
+                           std::is_constructible<E, G>>,
+          std::negation<std::disjunction<
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
-                                    const hy::expected<U, G>>> &&
-          std::is_same_v<bool, std::remove_cv_t<Vt>>>,
+                                    const hy::expected<U, G>>>>,
+          std::disjunction<
+              std::is_same<bool, std::remove_cv_t<Vt>>,
+              std::conjunction<
+                  std::negation<std::is_same<bool, std::remove_cv_t<Vt>>>,
+                  std::negation<std::disjunction<
+                      std::is_constructible<V, hy::expected<U, G>&>,
+                      std::is_constructible<V, hy::expected<U, G>>,
+                      std::is_constructible<V, const hy::expected<U, G>&>,
+                      std::is_constructible<V, const hy::expected<U, G>>,
+                      std::is_convertible<hy::expected<U, G>&, V>,
+                      std::is_convertible<hy::expected<U, G>, V>,
+                      std::is_convertible<const hy::expected<U, G>&, V>,
+                      std::is_convertible<const hy::expected<U, G>, V>>>>>>>,
+      typename = std::enable_if_t<std::conjunction_v<
+          std::is_convertible<U, V>, std::is_convertible<G, E>>>,
       typename...>
   constexpr expected(expected<U, G>&& other)
       : details::ExpectedStorage<V, E>{std::move(other)} {}
 
   template <
       class U, class G, typename Vt = V,
-      typename = std::enable_if_t<
-          std::conjunction_v<std::is_constructible<V, U>,
-                             std::is_constructible<E, G>> &&
-          !std::disjunction_v<
+      typename = std::enable_if_t<std::conjunction_v<
+          std::conjunction<std::is_constructible<V, U>,
+                           std::is_constructible<E, G>>,
+          std::negation<std::disjunction<
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>, hy::expected<U, G>>,
               std::is_constructible<hy::unexpected<E>,
                                     const hy::expected<U, G>&>,
               std::is_constructible<hy::unexpected<E>,
-                                    const hy::expected<U, G>>> &&
-          !std::is_same_v<bool, std::remove_cv_t<Vt>> &&
-          !std::disjunction_v<
-              std::is_constructible<V, hy::expected<U, G>&>,
-              std::is_constructible<V, hy::expected<U, G>>,
-              std::is_constructible<V, const hy::expected<U, G>&>,
-              std::is_constructible<V, const hy::expected<U, G>>,
-              std::is_convertible<hy::expected<U, G>&, V>,
-              std::is_convertible<hy::expected<U, G>, V>,
-              std::is_convertible<const hy::expected<U, G>&, V>,
-              std::is_convertible<const hy::expected<U, G>, V>>>>
-  constexpr expected(expected<U, G>&& other)
+                                    const hy::expected<U, G>>>>,
+          std::disjunction<
+              std::is_same<bool, std::remove_cv_t<Vt>>,
+              std::conjunction<
+                  std::negation<std::is_same<bool, std::remove_cv_t<Vt>>>,
+                  std::negation<std::disjunction<
+                      std::is_constructible<V, hy::expected<U, G>&>,
+                      std::is_constructible<V, hy::expected<U, G>>,
+                      std::is_constructible<V, const hy::expected<U, G>&>,
+                      std::is_constructible<V, const hy::expected<U, G>>,
+                      std::is_convertible<hy::expected<U, G>&, V>,
+                      std::is_convertible<hy::expected<U, G>, V>,
+                      std::is_convertible<const hy::expected<U, G>&, V>,
+                      std::is_convertible<const hy::expected<U, G>, V>>>>>>>,
+      typename = std::enable_if_t<std::negation_v<std::conjunction<
+          std::is_convertible<U, V>, std::is_convertible<G, E>>>>>
+  constexpr explicit expected(expected<U, G>&& other)
       : details::ExpectedStorage<V, E>{std::move(other)} {}
 
-  /*6*/
-  template <class U = V, typename Vt = V,
-            typename = std::enable_if_t<
-                !std::is_same_v<hy::remove_cvref_t<U>, std::in_place_t> &&
-                !std::is_same_v<hy::expected<V, E>, hy::remove_cvref_t<U>> &&
-                std::is_constructible_v<V, U> && std::is_convertible_v<U, V> &&
-                !details::is_unexpected_specialization_v<U> /*&& */>,
-            typename...>
+  /*6*//*ToDo*/
+  template <
+      class U = V, typename Vt = V, typename Et = E,
+      std::enable_if_t<std::conjunction_v<std::negation<
+          std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<
+              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+          std::is_constructible_v<V, U>,
+          std::negation<
+              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+          std::disjunction<
+              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::conjunction<
+                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                                                         hy::expected>>>>>>>
   constexpr expected(U&& v)
       : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
 
-  template <class U = V, typename Vt = V,
-            typename = std::enable_if_t<
-                !std::is_same_v<hy::remove_cvref_t<U>, std::in_place_t> &&
-                !std::is_same_v<hy::expected<V, E>, hy::remove_cvref_t<U>> &&
-                std::is_constructible_v<V, U> && !std::is_convertible_v<U, V> &&
-                !details::is_unexpected_specialization_v<U> /*&&*/>>
-  constexpr explicit expected(U&& v)
-      : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
+  // template <
+  //     class U = V, typename Vt = V, typename Et = E, std::enable_if_t<
+
+  //     >, typename...>
+  // constexpr explicit expected(U&& v)
+  //     : details::ExpectedStorage<V, E>{std::forward<U>(v)} {}
 
   /*7*/
-  template <class G,
-            typename = std::enable_if_t<std::is_constructible_v<E, const G&> &&
-                                        std::is_convertible_v<const G&, E>>,
-            typename...>
-  constexpr expected(const hy::unexpected<G>& e)
-      : details::ExpectedStorage<V, E>{e} {}
-
-  template <class G,
-            typename = std::enable_if_t<std::is_constructible_v<E, const G&> &&
-                                        !std::is_convertible_v<const G&, E>>>
+  template <class G, typename = std::enable_if_t<std::conjunction_v<
+                         std::is_constructible<E, const G&>,
+                         std::negation<std::is_convertible<const G&, E>>>>>
   constexpr explicit expected(const hy::unexpected<G>& e)
       : details::ExpectedStorage<V, E>{e} {}
 
   /*8*/
-  template <class G,
-            typename = std::enable_if_t<std::is_constructible_v<E, G> &&
-                                        std::is_convertible_v<G, E>>,
-            typename...>
-  constexpr expected(hy::unexpected<G>&& e)
-      : details::ExpectedStorage<V, E>{std::move(e)} {}
-
-  template <class G,
-            typename = std::enable_if_t<std::is_constructible_v<E, G> &&
-                                        !std::is_convertible_v<G, E>>>
+  template <class G, typename = std::enable_if_t<std::conjunction_v<
+                         std::is_constructible<E, G>,
+                         std::negation<std::is_convertible<G, E>>>>>
   constexpr explicit expected(hy::unexpected<G>&& e)
       : details::ExpectedStorage<V, E>{std::move(e)} {}
 
@@ -1076,30 +1122,76 @@ class expected final : public details::ExpectedStorage<V, E> {
   ~expected() = default;
 
   /*Assignments*/
+  /*1*/
+  template <typename Vt = V, typename Et = E,
+            std::enable_if_t<std::negation_v<std::conjunction<
+                std::is_copy_assignable<Vt>, std::is_copy_constructible<Vt>,
+                std::is_copy_assignable<Et>, std::is_copy_constructible<Et>,
+                std::disjunction<std::is_nothrow_move_constructible<Vt>,
+                                 std::is_nothrow_move_constructible<Et>>>>>>
+  constexpr expected& operator=(const expected& other) = delete;
+
+  template <typename Vt = V, typename Et = E,
+            std::enable_if_t<std::conjunction_v<
+                std::is_copy_assignable<Vt>, std::is_copy_constructible<Vt>,
+                std::is_copy_assignable<Et>, std::is_copy_constructible<Et>,
+                std::disjunction<std::is_nothrow_move_constructible<Vt>,
+                                 std::is_nothrow_move_constructible<Et>>>>,
+            typename...>
   constexpr expected& operator=(const expected& other) {
     base::operator=(other);
     return *this;
   }
 
+  /*2*/
+  template <typename Vt = V, typename Et = E,
+            std::enable_if_t<std::conjunction_v<
+                std::is_move_assignable<Vt>, std::is_move_constructible<Vt>,
+                std::is_move_assignable<Et>, std::is_move_constructible<Et>,
+                std::disjunction<std::is_nothrow_move_constructible<Vt>,
+                                 std::is_nothrow_move_constructible<Et>>>>>
   constexpr expected& operator=(expected&& other) noexcept(
       noexcept(base::operator=(std::move(other)))) {
     base::operator=(std::move(other));
     return *this;
   }
 
-  template <class U = V>
+  /*3*/
+  template <class U = V, typename Vt = V, typename Et = E,
+            std::enable_if_t<std::conjunction_v<
+                std::negation<
+                    std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+                std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                                                       hy::unexpected>>,
+                std::conjunction<
+                    std::is_constructible<V, U>, std::is_assignable<V&, U>,
+                    std::disjunction<std::is_nothrow_constructible<V, U>,
+                                     std::is_nothrow_move_constructible<Vt>,
+                                     std::is_nothrow_move_constructible<Et>>>>>>
   constexpr expected& operator=(U&& v) {
     base::operator=(std::move(v));
     return *this;
   }
 
-  template <class G>
+  /*4*/
+  template <
+      class G, typename Vt = V, typename Et = E,
+      std::enable_if_t<std::conjunction_v<
+          std::is_constructible<E, const G&>, std::is_assignable<E&, const G&>,
+          std::disjunction<std::is_nothrow_constructible<E, const G&>,
+                           std::is_nothrow_move_constructible<Vt>,
+                           std::is_nothrow_move_constructible<Et>>>>>
   constexpr expected& operator=(const hy::unexpected<G>& e) {
     base::operator=(e);
     return *this;
   }
 
-  template <class G>
+  template <class G, typename Vt = V, typename Et = E,
+            std::enable_if_t<std::conjunction_v<
+                std::is_constructible<E, G>, std::is_assignable<E&, G>,
+                std::disjunction<std::is_nothrow_constructible<E, G>,
+                                 std::is_nothrow_move_constructible<Vt>,
+                                 std::is_nothrow_move_constructible<Et>>>>>
   constexpr expected& operator=(hy::unexpected<G>&& e) {
     base::operator=(std::move(e));
     return *this;
@@ -1363,8 +1455,8 @@ class expected final : public details::ExpectedStorage<V, E> {
   }
 
   template <class F, typename Vt = V,
-            typename = std::enable_if_t<
-                std::is_constructible_v<V, decltype((std::declval<Vt&>()))>>>
+            typename = std::enable_if_t<std::is_constructible_v<
+                V, decltype((std::declval<const Vt&>()))>>>
   constexpr auto or_else(F&& f) const& {
     using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
     static_assert(std::is_same_v<typename G::value_type, V>, "");
@@ -1377,7 +1469,7 @@ class expected final : public details::ExpectedStorage<V, E> {
 
   template <class F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
-                V, decltype(std::move(std::declval<Vt&>()))>>>
+                V, decltype(std::move(std::declval<Vt&&>()))>>>
   constexpr auto or_else(F&& f) && {
     using G = hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(error()))>>;
@@ -1391,7 +1483,7 @@ class expected final : public details::ExpectedStorage<V, E> {
 
   template <typename F, typename Vt = V,
             typename = std::enable_if_t<std::is_constructible_v<
-                V, decltype(std::move(std::declval<Vt&>()))>>>
+                V, decltype(std::move(std::declval<const Vt&&>()))>>>
   constexpr auto or_else(F&& f) const&& {
     using G = hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(error()))>>;
