@@ -2,6 +2,7 @@
 #define FILE_HY_H_
 
 #include <exception>
+#include <string_view>
 #include <system_error>
 #include "Unexpected.hpp"
 #ifdef __linux__
@@ -21,7 +22,7 @@ public:
   constexpr File() noexcept : fd_(-1), owns_fd_(false) {}
   explicit File(int fd, bool ownsFd = false) noexcept;
 
-  explicit File(const std::string &name, int flags = O_RDONLY,
+  explicit File(std::string_view, int flags = O_RDONLY,
                 mode_t mode = 0666);
   explicit File(const char *name, int flags = O_RDONLY, mode_t mode = 0666);
   /*
