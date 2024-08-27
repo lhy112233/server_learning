@@ -43,7 +43,28 @@ namespace hy {
     }
 
 
+File File::temporary() {
+    FILE* tmpFile = tmpfile();
+    check(!tmpFile, []{throw std::system_error{errno, };});
+    /*TODO*/
+}
 
+int File::release() noexcept {
+    int release = fd_;
+    fd_ = -1;
+    owns_fd_ = false;
+    return release;
+}
+
+void File::swap(File& other) noexcept {
+  using std::swap;
+  swap(fd_, other.fd_);
+  swap(owns_fd_, other.owns_fd_);
+}
+
+void swap(File& a, File& b) noexcept {
+  a.swap(b);
+}
 
 
 
