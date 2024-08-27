@@ -2249,9 +2249,9 @@ class expected final : public details::ExpectedStorage<V, E> {
         "The comparison result cannot be converted to bool type");
     return !x.has_value() && static_cast<bool>(x.error() == e.error());
   }
-
-  friend constexpr auto swap(expected& lhs,
-                             expected& rhs) noexcept(noexcept(lhs.swap(rhs)))
+  template<typename T, typename U>
+  friend constexpr auto swap(expected<T, U>& lhs,
+                             expected<T, U>& rhs) noexcept(noexcept(lhs.swap(rhs)))
       -> decltype(lhs.swap(rhs)) {
     lhs.swap(rhs);
   }
