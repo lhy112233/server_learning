@@ -1,4 +1,5 @@
 #include "Traits.hpp"
+#include "Unexpected.hpp"
 // #include "Utility.h"
 #include <cstddef>
 #include <iostream>
@@ -12,9 +13,11 @@ using namespace hy;
 
 
 expected<int, double> fun(){
-    expected<int,double> exp{1};
-    std::cout << "测试" << exp.value();
-    return exp;
+    expected<int,double> exp_1{1};
+    auto exp_2 = expected<int, double>{hy::unexpected<double>{2.0}};
+    swap(exp_1,exp_2);
+    std::cout << "测试" << exp_1.value();
+    return exp_2;
 }
 
 int main() {
