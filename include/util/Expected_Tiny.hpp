@@ -334,9 +334,9 @@ class ExpectedStorage {                                          //eUnion
   /*Destory*/
   ~ExpectedStorage() {
     if (has_value()) {
-      ~val_;
+      std::destroy_at(std::addressof(val_));
     } else {
-      ~unex_;
+      std::destroy_at(std::addressof(unex_));
     }
   }
 

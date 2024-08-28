@@ -8,16 +8,16 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include "Expected_Tiny.hpp"
 #include "IPAddressException.h"
+#include "IPAddressV6.h"
 #include "Unit.hpp"
 #include "Utility.h"
-#include "Expected_Tiny.hpp"
-#include "IPAddressV6.h"
-
 
 namespace hy {
 namespace net {
@@ -28,7 +28,7 @@ class IPAddressV6;
 /**
  * @brief "IPV4地址结构体"和"网络掩码"组成的一对结构
  */
-using CIDRNetworkV4 = std::tuple<IPAddressV4, std::uint8_t>;
+using CIDRNetworkV4 = std::pair<IPAddressV4, std::uint8_t>;
 
 /**
  * @brief 存储ipv4地址的数组结构 
@@ -60,7 +60,6 @@ class IPAddressV4 {
    * order(本地字节序)
    */
   static IPAddressV4 fromLongHBO(uint32_t ip);
-
 
   static IPAddressV4 fromBinary(ByteArray4 bytes);
 
@@ -114,14 +113,13 @@ class IPAddressV4 {
 
   uint32_t toLongHBO() const { return ntohl(toLong()); }
 
-  static constexpr std::size_t bitCount() noexcept {return 32;}
+  static constexpr std::size_t bitCount() noexcept { return 32; }
 
   std::string toJson() const;
 
-  size_t hash() const ;
+  size_t hash() const;
 
   bool inSubnet(std::string_view cidrNetwork) const;
-
 
   bool inSubnet(const IPAddressV4& subnet, uint8_t cidr) const {
     return inSubnetWithMask(subnet, fetchMask(cidr));
@@ -148,38 +146,38 @@ class IPAddressV4 {
     return (INADDR_BROADCAST == toLongHBO());
   }
 
-    IPAddressV4 mask(size_t numBits) const;    
+  IPAddressV4 mask(size_t numBits) const;
 
-    std::string str() const;    
+  std::string str() const;
 
-    std::string toInverseArpaName() const;    
+  std::string toInverseArpaName() const;
 
-    in_addr toAddr() const { return addr_.inAddr_; }
+  in_addr toAddr() const { return addr_.inAddr_; }
 
-    sockaddr_in toSockAddr() const ;
+  sockaddr_in toSockAddr() const;
 
-    ByteArray4 toByteArray() const ;
+  ByteArray4 toByteArray() const;
 
-    std::string toFullQualified() const {return str();}
+  std::string toFullQualified() const { return str(); }
 
-    void toFullyQualifiedAppend(std::string& out) const;
+  void toFullyQualifiedAppend(std::string& out) const;
 
-    std::uint8_t version() const noexcept {return 4;}
+  std::uint8_t version() const noexcept { return 4; }
 
-      static ByteArray4 fetchMask(std::size_t numBits);
+  static ByteArray4 fetchMask(std::size_t numBits);
 
-      static CIDRNetworkV4 longestCommonPrefix(
-      const CIDRNetworkV4& one, const CIDRNetworkV4& two);
+  static CIDRNetworkV4 longestCommonPrefix(const CIDRNetworkV4& one,
+                                           const CIDRNetworkV4& two);
 
-        static std::size_t byteCount() noexcept { return 4; }
-    
+  static std::size_t byteCount() noexcept { return 4; }
+
   bool getNthMSBit(std::size_t bitIndex) const {
     return detail::getNthMSBitImpl(*this, bitIndex, AF_INET);
   }
 
-    std::uint8_t getNthMSByte(std::size_t byteIndex) const;
+  std::uint8_t getNthMSByte(std::size_t byteIndex) const;
 
-      bool getNthLSBit(std::size_t bitIndex) const;
+  bool getNthLSBit(std::size_t bitIndex) const;
 
   std::uint8_t getNthLSByte(std::size_t byteIndex) const;
 
@@ -203,7 +201,44 @@ class IPAddressV4 {
   expected<Unit, IPAddressFormatError> trySetFromBinary(
       ByteArray4 bytes) noexcept;
 };  // class IPAddressV4
+
+std::ostream& operator<<(std::ostream& os, const IPAddressV4& addr);
+
+void toAppend(const IPAddressV4& addr, std::string& result);
+
+inline bool operator==(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return (addr_1.toLong() == addr_2.toLong());
+}
+
+inline bool operator!=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return (addr_1.toLong() != addr_2.toLong());
+}
+
+inline bool operator<(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return (addr_1.toLong() < addr_2.toLong());
+}
+
+inline bool operator<=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return ((addr_1 < addr_2) || (addr_1 == addr_2));
+}
+
+inline bool operator>(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return (addr_2 < addr_1);
+}
+
+inline bool operator>=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
+  return !(addr_1 < addr_2);
+}
 }  // namespace net
 }  // namespace hy
+
+namespace std {
+template <>
+struct hash<hy::net::IPAddressV4> {
+  std::size_t operator()(const hy::net::IPAddressV4& addr) const {
+    return addr.hash();
+  }
+}; //hash
+}  // namespace std
 
 #endif  //HY_IPADDRESSV4_H_

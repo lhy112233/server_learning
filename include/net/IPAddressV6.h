@@ -9,12 +9,15 @@
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <ostream>
+#include <string>
 #include <string_view>
 #include <utility>
 #include "IPAddressException.h"
 #include "Unit.hpp"
 #include "Utility.h"
-#include "Expected_folly.hpp"
+#include "Version_control.hpp"
+#include "Expected_Tiny.hpp"
 
 namespace hy {
 namespace net {
@@ -240,7 +243,21 @@ class IPAddressV6 final {
       const ByteArray16& bytes) noexcept;
 };  //class IPAddressV6
 
+/*Free functions*/
+std::ostream& operator<<(std::ostream& os, const IPAddressV6& addr);
+
+void toAppend(const IPAddressV6& addr, std::string& result);
+
 }  //namespace net
 }  //namespace hy
+
+namespace std {
+template<>
+struct hash<hy::net::IPAddressV6> {
+  std::size_t operator() (const hy::net::IPAddressV6& addr) const {
+    return addr.hash();
+  }
+};
+} //namespace std
 
 #endif  //HY_IPADDRESSV6_H_
