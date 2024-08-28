@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <string_view>
 #include <system_error>
-#include "Utility.h"
+#include "Utility.hpp"
 
 namespace hy {
     File::File(int fd, bool owns_fd)noexcept : fd_(fd),owns_fd_(owns_fd){
@@ -98,9 +98,8 @@ void swap(File& a, File& b) noexcept {
 
 
     void File::unlock() {
-        /*TODO*/
+        check(flockNoEinTr(), "flock() failed (unlock)");
     }
-
 
     void File::unlockShared() {
         unlock();

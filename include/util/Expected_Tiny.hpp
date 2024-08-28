@@ -12,7 +12,7 @@ static_assert(false, "Please use std::expected! of C++23");
 #include "Bad_expected_access.hpp"
 #include "Traits.hpp"
 #include "Unexpected.hpp"
-#include "Utility.h"
+#include "Utility.hpp"
 
 namespace hy {
 /*Forward declear*/
