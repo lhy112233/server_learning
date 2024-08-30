@@ -23,8 +23,8 @@ class unexpected final {
   constexpr unexpected(unexpected&&) = default;
   template <class Err = E,
             typename = std::enable_if_t<
-                !std::is_same_v<hy::remove_cvref_t<Err>, unexpected> &&
-                !std::is_same_v<hy::remove_cvref_t<Err>, std::in_place_t> &&
+                !std::is_same_v<::hy::remove_cvref_t<Err>, unexpected> &&
+                !std::is_same_v<::hy::remove_cvref_t<Err>, std::in_place_t> &&
                 std::is_constructible_v<E, Err>>>
   constexpr explicit unexpected(Err&& e) : err_(std::forward<Err>(e)) {}
 

@@ -245,17 +245,17 @@ class ExpectedStorage {                                          //eUnion
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::is_convertible_v<U, V>>, typename...>
   constexpr ExpectedStorage(U&& v) : has_val_{true}, val_{std::forward<U>(v)} {}
@@ -263,17 +263,17 @@ class ExpectedStorage {                                          //eUnion
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::negation_v<std::is_convertible<U, V>>>>
   constexpr explicit ExpectedStorage(U&& v)
@@ -408,8 +408,8 @@ class ExpectedStorage {                                          //eUnion
   template <class U = V, typename Vt = V, typename Et = E,
             typename = std::enable_if_t<std::conjunction_v<
                 std::negation<
-                    std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
-                std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                    std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
+                std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                        hy::unexpected>>,
                 std::conjunction<
                     std::is_constructible<V, U>, std::is_assignable<V&, U>,
@@ -792,17 +792,17 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODUnion> {  //ePODUnion
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::is_convertible_v<U, V>>, typename...>
   constexpr ExpectedStorage(U&& v) : has_val_{true}, val_{std::forward<U>(v)} {}
@@ -810,17 +810,17 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODUnion> {  //ePODUnion
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::negation_v<std::is_convertible<U, V>>>>
   constexpr explicit ExpectedStorage(U&& v)
@@ -893,8 +893,8 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODUnion> {  //ePODUnion
   template <class U = V, typename Vt = V, typename Et = E,
             typename = std::enable_if_t<std::conjunction_v<
                 std::negation<
-                    std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
-                std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                    std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
+                std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                        hy::unexpected>>,
                 std::conjunction<
                     std::is_constructible<V, U>, std::is_assignable<V&, U>,
@@ -1230,17 +1230,17 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODStruct> {  //ePODStruct
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::is_convertible_v<U, V>>, typename...>
   constexpr ExpectedStorage(U&& v) : has_val_{true}, val_{std::forward<U>(v)} {}
@@ -1248,17 +1248,17 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODStruct> {  //ePODStruct
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::negation_v<std::is_convertible<U, V>>>>
   constexpr explicit ExpectedStorage(U&& v)
@@ -1327,9 +1327,9 @@ class ExpectedStorage<V, E, ExpectedStorageType::ePODStruct> {  //ePODStruct
   template <
       class U = V,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<ExpectedStorage, hy::remove_cvref_t<U>>>,
+          std::negation<std::is_same<ExpectedStorage, ::hy::remove_cvref_t<U>>>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::conjunction<
               std::is_constructible<V, U>, std::is_assignable<V&, U>,
               std::disjunction<std::is_nothrow_constructible<V, U>,
@@ -1643,17 +1643,17 @@ class expected final : public details::ExpectedStorage<V, E> {
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::is_convertible_v<U, V>>, typename...>
   constexpr expected(U&& v)
@@ -1662,17 +1662,17 @@ class expected final : public details::ExpectedStorage<V, E> {
   template <
       class U = V, typename Vt = V, typename Et = E,
       typename = std::enable_if_t<std::conjunction_v<
-          std::negation<std::is_same<hy::remove_cvref_t<U>, std::in_place_t>>,
+          std::negation<std::is_same<::hy::remove_cvref_t<U>, std::in_place_t>>,
           std::negation<
-              std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
+              std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
           std::is_constructible<V, U>,
           std::negation<
-              hy::is_specialization_of<hy::remove_cvref_t<U>, hy::unexpected>>,
+              hy::is_specialization_of<::hy::remove_cvref_t<U>, hy::unexpected>>,
           std::disjunction<
-              std::is_same<hy::remove_cvref_t<Vt>, bool>,
+              std::is_same<::hy::remove_cvref_t<Vt>, bool>,
               std::conjunction<
-                  std::negation<std::is_same<hy::remove_cvref_t<Vt>, bool>>,
-                  std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                  std::negation<std::is_same<::hy::remove_cvref_t<Vt>, bool>>,
+                  std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                          hy::expected>>>>>>,
       typename = std::enable_if_t<std::negation_v<std::is_convertible<U, V>>>>
   constexpr explicit expected(U&& v)
@@ -1773,8 +1773,8 @@ class expected final : public details::ExpectedStorage<V, E> {
   template <class U = V, typename Vt = V, typename Et = E,
             typename = std::enable_if_t<std::conjunction_v<
                 std::negation<
-                    std::is_same<hy::expected<V, E>, hy::remove_cvref_t<U>>>,
-                std::negation<hy::is_specialization_of<hy::remove_cvref_t<U>,
+                    std::is_same<hy::expected<V, E>, ::hy::remove_cvref_t<U>>>,
+                std::negation<hy::is_specialization_of<::hy::remove_cvref_t<U>,
                                                        hy::unexpected>>,
                 std::conjunction<
                     std::is_constructible<V, U>, std::is_assignable<V&, U>,
@@ -1921,7 +1921,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                                      F, decltype((value()))>>::error_type,
                                  E>,
                   "");
-    using U = hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
+    using U = ::hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), value());
     } else {
@@ -1937,7 +1937,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                                      F, decltype((value()))>>::error_type,
                                  E>,
                   "");
-    using U = hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
+    using U = ::hy::remove_cvref_t<std::invoke_result_t<F, decltype((value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), value());
     } else {
@@ -1954,7 +1954,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                            F, decltype(std::move(value()))>>::error_type,
                        E>,
         "");
-    using U = hy::remove_cvref_t<
+    using U = ::hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), std::move(value()));
@@ -1972,7 +1972,7 @@ class expected final : public details::ExpectedStorage<V, E> {
                            F, decltype(std::move(value()))>>::error_type,
                        E>,
         "");
-    using U = hy::remove_cvref_t<
+    using U = ::hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(value()))>>;
     if (has_value()) {
       return std::invoke(std::forward<F>(f), std::move(value()));
@@ -2059,7 +2059,7 @@ class expected final : public details::ExpectedStorage<V, E> {
             typename = std::enable_if_t<
                 std::is_constructible_v<V, decltype((std::declval<Vt&>()))>>>
   constexpr auto or_else(F&& f) & {
-    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    using G = ::hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
     static_assert(std::is_same_v<typename G::value_type, V>, "");
     if (has_value()) {
       return G(std::in_place, value());
@@ -2072,7 +2072,7 @@ class expected final : public details::ExpectedStorage<V, E> {
             typename = std::enable_if_t<std::is_constructible_v<
                 V, decltype((std::declval<const Vt&>()))>>>
   constexpr auto or_else(F&& f) const& {
-    using G = hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
+    using G = ::hy::remove_cvref_t<std::invoke_result_t<F, decltype(error())>>;
     static_assert(std::is_same_v<typename G::value_type, V>, "");
     if (has_value()) {
       return G(std::in_place, value());
@@ -2085,7 +2085,7 @@ class expected final : public details::ExpectedStorage<V, E> {
             typename = std::enable_if_t<std::is_constructible_v<
                 V, decltype(std::move(std::declval<Vt&&>()))>>>
   constexpr auto or_else(F&& f) && {
-    using G = hy::remove_cvref_t<
+    using G = ::hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(error()))>>;
     static_assert(std::is_same_v<typename G::value_type, V>, "");
     if (has_value()) {
@@ -2099,7 +2099,7 @@ class expected final : public details::ExpectedStorage<V, E> {
             typename = std::enable_if_t<std::is_constructible_v<
                 V, decltype(std::move(std::declval<const Vt&&>()))>>>
   constexpr auto or_else(F&& f) const&& {
-    using G = hy::remove_cvref_t<
+    using G = ::hy::remove_cvref_t<
         std::invoke_result_t<F, decltype(std::move(error()))>>;
     static_assert(std::is_same_v<typename G::value_type, V>, "");
     if (has_value()) {

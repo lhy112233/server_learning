@@ -29,6 +29,12 @@ template <class T, class... Args>
 constexpr T* construct_at(T* p, Args&&... args) {
   return ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...);
 }
+#else
+template<typename T, typename...Args>
+constexpr T* construct_at(T* p, Args&&... args) {
+  return ::std::construct_at(p, std::forward<Args>(args)...);
+}
+
 #endif  //CPP17
 
 template <typename F, typename... Args>

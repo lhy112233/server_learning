@@ -72,10 +72,16 @@ struct remove_cvref {
 };
 
 template <class T>
-using remove_cvref_t = typename hy::remove_cvref<T>::type;
+using remove_cvref_t = typename ::hy::remove_cvref<T>::type;
 
+#else
+template<typename T>
+using remove_cvref = ::std::remove_cvref<T>;
 
+template<typename T>
+using remove_cvref_t = ::std::remove_cvref_t<T>;
 
+#endif
 
 
 
@@ -89,7 +95,7 @@ struct is_specialization_of<Template<Args...>, Template> : std::true_type {};
 template<typename T, template<typename...> class Template>
 constexpr bool is_specialization_of_v = is_specialization_of<T, Template>::value;
 
-#endif
+
 
 }  // namespace hy
 #endif  // TRAITS_HPP_
