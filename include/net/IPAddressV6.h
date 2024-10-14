@@ -1,26 +1,34 @@
 #ifndef HY_IPADDRESSV6_H_
 #define HY_IPADDRESSV6_H_
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+/*依赖于C++23的std::expected,C++20的constexpr条件的进一步放松*/
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <expected>
+#include <format>
 #include <memory>
-#include <optional>
+#include <new>
 #include <ostream>
+#include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
-#include "IPAddressException.h"
+
 #include "Unit.hpp"
 #include "Utility.hpp"
-#include "Version_control.hpp"
-#include "Expected_Tiny.hpp"
+
+#ifdef __linux
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#endif
 
 namespace hy {
 namespace net {
+
 /*Forward declare*/
 class IPAddress;
 class IPAddressV4;
@@ -33,231 +41,101 @@ using ByteArray16 = std::array<std::uint8_t, 16>;
 
 class IPAddressV6 final {
  public:
-  enum class Type {
-    TEREDO,
-    T6TO4,
-    NORMAL,
-  };
+  using address_type = ::in6_addr;
+  using scope_type = std::uint16_t;
 
-  enum class LinkLocalTag {
-    LINK_LOCAL,
-  };
+  constexpr IPAddressV6() noexcept;
+  constexpr IPAddressV6(const IPAddressV6&) noexcept = default;
+  constexpr IPAddressV6(IPAddressV6&&) noexcept = default;
+  constexpr IPAddressV6& operator=(const IPAddressV6&) noexcept = default;
+  constexpr IPAddressV6& operator=(IPAddressV6&&) noexcept = default;
+  constexpr ~IPAddressV6() = default;
 
-  inline static constexpr std::uint32_t PREFIX_TEREDO = 0x20010000;
+  constexpr IPAddressV6(std::span<const std::uint8_t, 16> byte,
+                        scope_type scope = 0) noexcept;
+  constexpr IPAddressV6(const address_type& addr,
+                        scope_type scope = 0) noexcept;
 
-  inline static constexpr uint32_t PREFIX_6TO4 = 0x2002;
+  constexpr scope_type getScope() const noexcept { return scope_; }
+  constexpr void setScope(scope_type scope) noexcept { scope_ = scope; }
 
-  inline static constexpr std::size_t kToFullyQualifiedSize =
-      8 /*words*/ * 4 /*hex chars per word*/ + 7 /*separators*/;
+  constexpr ByteArray16 toByte() const noexcept;
+  constexpr std::string toString() const;
 
-  static bool validate(std::string_view ip) noexcept;
+  constexpr bool isLoopback() const noexcept;
+  constexpr bool isBroadcast() const noexcept;
+  constexpr bool isUnspecified() const noexcept;
 
-  static IPAddressV6 fromBinary(const ByteArray16& bytes);
+  constexpr static std::expected<IPAddressV6, std::error_code> fromString(
+      std::string_view str, scope_type scope,
+      const std::nothrow_t& tag) noexcept;
 
-  static expected<IPAddressV6, IPAddressFormatError> tryFromBinary(
-      const ByteArray16& bytes) noexcept;
+  constexpr static IPAddressV6 fromString(std::string_view str,
+                                          scope_type scope = 0);
 
-  static expected<IPAddressV6, IPAddressFormatError> tryFromString(
-      std::string_view str) noexcept;
+  friend constexpr bool operator<(const IPAddressV6& lhs,
+                                  const IPAddressV6& rhs) noexcept;
 
-  static IPAddressV6 fromInverseArpaName(std::string_view arpaname);
+  friend constexpr bool operator==(const IPAddressV6& lhs,
+                                   const IPAddressV6& rhs) noexcept;
 
-  ByteArray16 toBinary() const { return addr_.bytes_; }
+  friend constexpr bool operator>(const IPAddressV6& lhs,
+                                  const IPAddressV6& rhs) noexcept;
 
-  /*Constructors*/
-  IPAddressV6();
+  friend constexpr bool operator<=(const IPAddressV6& lhs,
+                                   const IPAddressV6& rhs) noexcept;
 
-  explicit IPAddressV6(std::string_view addr);
+  friend constexpr bool operator>=(const IPAddressV6& lhs,
+                                   const IPAddressV6& rhs) noexcept;
 
-  explicit IPAddressV6(const ByteArray16& src) noexcept : addr_{src} {}
-
-  explicit IPAddressV6(const in6_addr& src) noexcept : addr_{src} {}
-
-  explicit IPAddressV6(const sockaddr_in6& src) noexcept;
-
-  IPAddressV6(LinkLocalTag tag, MacAddress mac);
-
-  IPAddressV4 createIPv4() const;
-
-  IPAddressV4 getIPv4For6To4() const;
-
-  bool is6To4() const { return type() == IPAddressV6::Type::T6TO4; }
-
-  bool isTeredo() const { return type() == IPAddressV6::Type::TEREDO; }
-
-  bool isIPv4Mapped() const;
-
-  Type type() const;
-
-  static constexpr std::size_t bitCount() { return 128; }
-
-  std::string toJson() const;
-
-  std::size_t hash() const;
-
-  bool inSubnet(std::string_view cidrNetwork) const;
-
-  bool inSubnet(const IPAddressV6& subnet, uint8_t cidr) const {
-    return inSubnetWithMask(subnet, fetchMask(cidr));
-  }
-
-  bool inSubnetWithMask(const IPAddressV6& subnet,
-                        const ByteArray16& mask) const;
-
-  bool isLoopback() const;
-
-  bool isNonroutable() const { return !isRoutable(); }
-
-  bool isRoutable() const;
-
-  bool isPrivate() const;
-
-  bool isLinkLocal() const;
-
-  std::optional<MacAddress> getMacAddressFromLinkLocal() const;
-
-  std::optional<MacAddress> getMacAddressFromEUI64() const;
-
-  bool isMulticast() const;
-
-  std::uint8_t getMulticastFlags() const;
-
-  std::uint8_t getMulticastScope() const;
-
-  const auto bytes() const noexcept { return addr_.in6Addr_.s6_addr; }
-
-  bool empty() const {
-    constexpr auto zero = ByteArray16{{}};
-    return 0 == std::memcmp(bytes(), zero.data(), zero.size());
-  }
-
-  bool isLinkLocalBroadcast() const;
-
-  IPAddressV6 mask(std::size_t numBits) const;
-
-  in6_addr toAddr() const { return addr_.in6Addr_; }
-
-  uint16_t getScopeId() const { return scope_; }
-
-  void setScopeId(uint16_t scope) { scope_ = scope; }
-
-  sockaddr_in6 toSockAddr() const {
-    sockaddr_in6 addr;
-    std::memset(std::addressof(addr), 0, sizeof(sockaddr_in6));
-    addr.sin6_family = AF_INET6;
-    addr.sin6_scope_id = scope_;
-    std::memcpy(std::addressof(addr.sin6_addr), std::addressof(addr_.in6Addr_),
-                sizeof(in6_addr));
-    return addr;
-  }
-
-  ByteArray16 toByteArray() const {
-    ByteArray16 ba{{0}};
-    std::memcpy(ba.data(), bytes(), 16);
-    return ba;
-  }
-
-  std::string toFullyQualified() const;
-
-  void toFullyQualifiedAppend(std::string& out) const;
-
-  std::string toInverseArpaName() const;
-
-  std::string str() const;
-
-  std::uint8_t version() const { return 6; }
-
-  IPAddressV6 getSolicitedNodeAddress() const;
-
-  static ByteArray16 fetchMask(std::size_t numBits);
-
-  static CIDRNetworkV6 longestCommonPrefix(
-      const CIDRNetworkV6& one, const CIDRNetworkV6& two);
-
-  static constexpr std::size_t byteCount() { return 16; }
-
-  bool getNthMSBit(std::size_t bitIndex) const {
-    return detail::getNthMSBitImpl(*this, bitIndex, AF_INET6);
-  }
-
-  std::uint8_t getNthMSByte(std::size_t byteIndex) const;
-
-  bool getNthLSBit(std::size_t bitInndex) const {
-    return getNthMSBit(bitCount() - bitInndex - 1);
-  }
-
-  std::uint8_t getNthLSByte(std::size_t byteIndex) const {
-    return getNthMSByte(byteCount() - byteIndex - 1);
-  }
-
- protected:
-  bool inBinarySubnet(const std::array<std::uint8_t, 2> addr,
-                      std::size_t numBits) const;
+  friend constexpr bool operator!=(const IPAddressV6& lhs,
+                                   const IPAddressV6& rhs) noexcept;
 
  private:
-  auto tie() const { return std::tie(addr_.bytes_, scope_); }
+  address_type addr_{0};
+  scope_type scope_{0};
+};
 
- public:
-  /*Friends*/
-  friend inline bool operator==(const IPAddressV6& lhs,
-                                const IPAddressV6& rhs) {
-    return lhs.tie() == rhs.tie();
-  }
+// template<typename...Args>
+// requires std::is_constructible_v<IPAddressV6, Args...>
+// constexpr IPAddressV4 makeIPAddressV6(Args&&...args)
+// noexcept(std::is_nothrow_constructible_v<IPAddressV6, Args...>);
 
-  friend inline bool operator!=(const IPAddressV6& lhs,
-                                const IPAddressV6& rhs) {
-    return !(lhs == rhs);
-  }
+// template<typename...Args>
+// requires std::is_constructible_v<std::expected<IPAddressV6, std::error_code>,
+// Args...> ||
 
-  friend inline bool operator<(const IPAddressV6& lhs, const IPAddressV6& rhs) {
-    return lhs.tie() < rhs.tie();
-  }
+constexpr std::ostream& operator<<(std::ostream& os, const IPAddressV6& ip);
 
-  friend inline bool operator<=(const IPAddressV6& lhs,
-                                const IPAddressV6& rhs) {
-    return (lhs < rhs) || (lhs == rhs);
-  }
-
-  friend inline bool operator>(const IPAddressV6& lhs, const IPAddressV6& rhs) {
-    return !(lhs <= rhs);
-  }
-
-  friend inline bool operator>=(const IPAddressV6& lhs,
-                                const IPAddressV6& rhs) {
-    return !(lhs < rhs);
-  }
-
- private:
-  union AddressStorage {
-    in6_addr in6Addr_;
-    ByteArray16 bytes_;
-    AddressStorage() { MemZero(*this); }
-    explicit AddressStorage(const in6_addr& addr) : in6Addr_(addr) {}
-    explicit AddressStorage(const ByteArray16& bytes) : bytes_(bytes) {}
-    explicit AddressStorage(const MacAddress& mac);
-  } addr_;
-
-  std::uint16_t scope_{0};
-
-  expected<Unit, IPAddressFormatException> trySetFromBinary(
-      const ByteArray16& bytes) noexcept;
-};  //class IPAddressV6
-
-/*Free functions*/
-std::ostream& operator<<(std::ostream& os, const IPAddressV6& addr);
-
-void toAppend(const IPAddressV6& addr, std::string& result);
-
-}  //namespace net
-}  //namespace hy
+}  // namespace net
+}  // namespace hy
 
 namespace std {
-template<>
+template <>
 struct hash<hy::net::IPAddressV6> {
-  std::size_t operator() (const hy::net::IPAddressV6& addr) const {
-    return addr.hash();
+  constexpr std::size_t operator()(
+      const hy::net::IPAddressV6& addr) const noexcept {
+    auto bytes = addr.toByte();
+    std::size_t result = static_cast<std::size_t>(addr.getScope());
+    combine_4_bytes(result, &bytes[0]);
+    combine_4_bytes(result, &bytes[4]);
+    combine_4_bytes(result, &bytes[8]);
+    combine_4_bytes(result, &bytes[12]);
+    return result;
+  }
+
+ private:
+  static constexpr void combine_4_bytes(std::size_t seed,
+                                        const uint8_t* bytes) {
+    const std::size_t bytes_hash = (static_cast<std::size_t>(bytes[0]) << 24) |
+                                   (static_cast<std::size_t>(bytes[1]) << 16) |
+                                   (static_cast<std::size_t>(bytes[2]) << 8) |
+                                   (static_cast<std::size_t>(bytes[3]));
+    seed ^= bytes_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
   }
 };
-} //namespace std
+}  // namespace std
 
-#endif  //HY_IPADDRESSV6_H_
+#include "impl/IPAddressV6_impl.hpp"
+
+#endif  // HY_IPADDRESSV6_H_

@@ -7,19 +7,21 @@
 #include <utility>
 #include <vector>
 #include <iostream>
-#include <Expected_Tiny.hpp>
+#include <format>
+#include <bit>
+#include "IPAddressV6.h"
+#include "IPAddressV4.h"
+#include "IPAddress.h"
 using namespace hy;
 
 
-expected<int, double> fun(){
-    expected<int,double> exp_1{1};
-    auto exp_2 = expected<int, double>{hy::unexpected<double>{2.0}};
-    swap(exp_1,exp_2);
-    exp_1 = 11;
-    std::cout << "测试" << exp_1.value();
-    return exp_2;
-}
 
 int main() {
-    fun();
+    // std::cout << std::format("test{}/n",__cplusplus);
+    // std::cout << std::format("__cpp_concepts: {}",__cpp_concepts);
+    // std::system_error err{std::make_error_code(std::errc::no_message)};
+    // std::cout << err.what();
+    hy::net::IPAddressV6 addr = hy::net::IPAddressV6::fromString("2001:0b28:f23f:f005:0000:0000:0000:000a");
+    // hy::net::IPAddressV6 addr_2 = hy::net::IPAddressV6::fromString("100::100");
+    std::cout << addr.toString();
 }

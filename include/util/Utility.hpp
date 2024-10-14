@@ -8,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <utility>
+#include <bit>
 #include "Preprocessor.h"
 
 namespace hy {
@@ -52,6 +53,24 @@ void check(int judge, F&& f, Args&&... args) noexcept(
     std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
   }
 }
+
+template<typename T>
+inline constexpr auto NboToHbo(const T& src) noexcept {
+  if constexpr (std::endian::big == std::endian::native) {
+    return src;
+  } else  if constexpr(std::endian::little == std::endian::native) {
+    return std::byteswap(src);
+  } else {
+    static_assert(false, "std::endian::native is no big or little.");
+  }
+}
+
+template<typename T>
+inline constexpr auto HboToNbo(const T& src) noexcept {
+  return NboToHbo(src);
+}
+
+
 
 }  // namespace hy
 #endif  // UTILITY_H_

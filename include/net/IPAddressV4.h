@@ -1,244 +1,114 @@
 #ifndef HY_IPADDRESSV4_H_
 #define HY_IPADDRESSV4_H_
 
-#include <netinet/in.h>
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
-#include <functional>
-#include <memory>
-#include <ostream>
-#include <string>
+#include <expected>
+#include <span>
+#include <stdexcept>
 #include <string_view>
-#include <tuple>
-#include <utility>
-#include "Expected_Tiny.hpp"
-#include "IPAddressException.h"
-#include "IPAddressV6.h"
-#include "Unit.hpp"
-#include "Utility.h"
+#include <system_error>
+#include <type_traits>
 
-namespace hy {
-namespace net {
+#ifdef __linux
+#include <netinet/in.h>
+#endif
+
+/*Forward declare*/
 class IPAddress;
 class IPAddressV4;
 class IPAddressV6;
+class MacAddress;
 
-/**
- * @brief "IPV4地址结构体"和"网络掩码"组成的一对结构
- */
 using CIDRNetworkV4 = std::pair<IPAddressV4, std::uint8_t>;
 
-/**
- * @brief 存储ipv4地址的数组结构 
- */
-using ByteArray4 = std::array<uint8_t, 4>;
+namespace hy {
+namespace net {
+  class IPAddressV4;
+using ByteArray4 = std::array<std::uint8_t, 4>;
 
-class IPAddressV4 {
+class IPAddressV4 final {
+  friend class std::hash<hy::net::IPAddressV4>;
+
  public:
-  /*Static member functions*/
-  /**
-   * Max size of std::string returned by toFullyQualified()
-   */
+  using address_type = typename ::in_addr;
+
   static constexpr std::size_t kMaxToFullyQualifiedSize =
       4 /*words*/ * 3 /*max chars per word*/ + 3 /*separators*/;
 
-  /**
-   * Returns true if the input string can be parsed as an IP address.
-   */
-  static bool validate(std::string_view ip) noexcept;
+  constexpr IPAddressV4() noexcept;
+  constexpr IPAddressV4(const IPAddressV4&) noexcept = default;
+  constexpr IPAddressV4(IPAddressV4&&) noexcept = default;
+  constexpr IPAddressV4& operator=(const IPAddressV4&) noexcept = default;
+  constexpr IPAddressV4& operator=(IPAddressV4&&) noexcept = default;
+  constexpr ~IPAddressV4() noexcept = default;
 
-  /**
-   * Create an IPAddressV4 instance from a uint32_t, using network byte
-   * order(网络字节序)
-   */
-  static IPAddressV4 fromLong(uint32_t ip);
+  constexpr IPAddressV4(std::span<const std::uint8_t, 4> byte) noexcept;
+  explicit constexpr IPAddressV4(std::uint32_t ip) noexcept;
+  explicit constexpr IPAddressV4(const address_type& addr) noexcept;
 
-  /**
-   * Create an IPAddressV4 instance from a uint32_t, using host byte
-   * order(本地字节序)
-   */
-  static IPAddressV4 fromLongHBO(uint32_t ip);
+  constexpr IPAddressV4& operator=(const address_type&) noexcept;
 
-  static IPAddressV4 fromBinary(ByteArray4 bytes);
+  constexpr ByteArray4 toByte() const noexcept;
+  constexpr std::string toString() const;
+  constexpr std::uint32_t toHBOLong() const noexcept;
 
-  /**
-   * Create a new IPAddressV4 from the provided string.
-   *
-   * Returns an IPAddressFormatError if the string is not a valid IP.
-   */
-  static expected<IPAddressV4, IPAddressFormatError> tryFromString(
-      std::string_view str) noexcept;
+  constexpr bool isLoopback() const noexcept;
+  constexpr bool isBroadcast() const noexcept;
+  constexpr bool isUnspecified() const noexcept;
 
-  /**
-   * Returns the address as a ByteRange.
-   */
-  ByteArray4 toBinary() const;
+  static constexpr IPAddressV4 fromString(std::string_view str);
+  static constexpr std::expected<IPAddressV4, std::error_code> fromString(
+      std::string_view str, std::nothrow_t) noexcept;
 
-  /**
-   * Create a new IPAddressV4 from a `in-addr.arpa` representation of an IP
-   * address.
-   *
-   * @throws IPAddressFormatException if the input is not a valid in-addr.arpa
-   * representation
-   */
-  static IPAddressV4 fromInverseArpaName(std::string_view arpaname);
+  friend constexpr bool operator<(const IPAddressV4& lhs,
+                                  const IPAddressV4& rhs) noexcept;
 
-  /**
-   * Convert a IPv4 address string to a long, in network byte order.
-   */
-  static uint32_t toLong(std::string_view ip);
+  friend constexpr bool operator==(const IPAddressV4& lhs,
+                                   const IPAddressV4& rhs) noexcept;
 
-  /**
-   * Convert a IPv4 address string to a long, in host byte order.
-   *
-   * This is slightly slower than toLong()
-   */
-  static uint32_t toLongHBO(std::string_view ip);
+  friend constexpr bool operator!=(const IPAddressV4& lhs,
+                                   const IPAddressV4& rhs) noexcept;
 
-  /*Constructors*/
-  IPAddressV4();
-  IPAddressV4(std::string_view addr);
-  explicit IPAddressV4(const ByteArray4& addr) noexcept;
-  explicit IPAddressV4(const in_addr addr) noexcept;
+  friend constexpr bool operator<=(const IPAddressV4& lhs,
+                                   const IPAddressV4& rhs) noexcept;
 
-  /*Member functions*/
-  /*Conversion*/
-  IPAddressV6 createIPv6() const;
+  friend constexpr bool operator>=(const IPAddressV4& lhs,
+                                   const IPAddressV4& rhs) noexcept;
 
-  IPAddressV6 getIPv6For6To4() const;
-
-  uint32_t toLong() const { return toAddr().s_addr; }
-
-  uint32_t toLongHBO() const { return ntohl(toLong()); }
-
-  static constexpr std::size_t bitCount() noexcept { return 32; }
-
-  std::string toJson() const;
-
-  size_t hash() const;
-
-  bool inSubnet(std::string_view cidrNetwork) const;
-
-  bool inSubnet(const IPAddressV4& subnet, uint8_t cidr) const {
-    return inSubnetWithMask(subnet, fetchMask(cidr));
-  }
-
-  bool inSubnetWithMask(const IPAddressV4& subnet, const ByteArray4 mask) const;
-
-  bool isLoopback() const;
-
-  bool isLinkLocal() const;
-
-  bool isNonroutable() const;
-
-  bool isPrivate() const;
-
-  bool isMulticast() const;
-
-  bool empty() const {
-    constexpr auto zero = ByteArray4{{}};
-    return 0 == std::memcmp(bytes(), zero.data(), zero.size());
-  }
-
-  bool isLinkLocalBroadcast() const {
-    return (INADDR_BROADCAST == toLongHBO());
-  }
-
-  IPAddressV4 mask(size_t numBits) const;
-
-  std::string str() const;
-
-  std::string toInverseArpaName() const;
-
-  in_addr toAddr() const { return addr_.inAddr_; }
-
-  sockaddr_in toSockAddr() const;
-
-  ByteArray4 toByteArray() const;
-
-  std::string toFullQualified() const { return str(); }
-
-  void toFullyQualifiedAppend(std::string& out) const;
-
-  std::uint8_t version() const noexcept { return 4; }
-
-  static ByteArray4 fetchMask(std::size_t numBits);
-
-  static CIDRNetworkV4 longestCommonPrefix(const CIDRNetworkV4& one,
-                                           const CIDRNetworkV4& two);
-
-  static std::size_t byteCount() noexcept { return 4; }
-
-  bool getNthMSBit(std::size_t bitIndex) const {
-    return detail::getNthMSBitImpl(*this, bitIndex, AF_INET);
-  }
-
-  std::uint8_t getNthMSByte(std::size_t byteIndex) const;
-
-  bool getNthLSBit(std::size_t bitIndex) const;
-
-  std::uint8_t getNthLSByte(std::size_t byteIndex) const;
-
-  const unsigned char* bytes() const { return addr_.bytes_.data(); }
+  friend constexpr bool operator>(const IPAddressV4& lhs,
+                                  const IPAddressV4& rhs) noexcept;
 
  private:
-  union AddressStorage {
-    static_assert(sizeof(in_addr) == sizeof(ByteArray4),
-                  "size of in_addr and ByteArray4 are different");
-    /*Constructor*/
-    AddressStorage() { MemZero(*this); }
-    explicit AddressStorage(const ByteArray4 bytes) : bytes_(bytes) {}
-    explicit AddressStorage(const in_addr addr) : inAddr_(addr) {}
-    /*Data*/
-    in_addr inAddr_;
-    ByteArray4 bytes_;
-  };
+  address_type addr_;
+};
 
-  AddressStorage addr_;
+// template <typename... Args>
+//   requires std::is_constructible_v<IPAddressV4, Args&&...>
+// constexpr IPAddressV4 makeIPAddressV4(Args&&... args) noexcept(
+//     std::is_nothrow_constructible_v<IPAddressV4, Args&&...>);
 
-  expected<Unit, IPAddressFormatError> trySetFromBinary(
-      ByteArray4 bytes) noexcept;
-};  // class IPAddressV4
+// template <typename... Args>
+//     requires std::is_constructible_v<IPAddressV4, Args&&...>
+// constexpr std::expected<IPAddressV4, std::error_code>
+// makeIPAddressV4(Args&&...args, const std::nothrow_t&) noexcept;
 
-std::ostream& operator<<(std::ostream& os, const IPAddressV4& addr);
+constexpr std::ostream& operator<<(std::ostream& os, const IPAddressV4& ip);
 
-void toAppend(const IPAddressV4& addr, std::string& result);
 
-inline bool operator==(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return (addr_1.toLong() == addr_2.toLong());
-}
-
-inline bool operator!=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return (addr_1.toLong() != addr_2.toLong());
-}
-
-inline bool operator<(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return (addr_1.toLong() < addr_2.toLong());
-}
-
-inline bool operator<=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return ((addr_1 < addr_2) || (addr_1 == addr_2));
-}
-
-inline bool operator>(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return (addr_2 < addr_1);
-}
-
-inline bool operator>=(const IPAddressV4& addr_1, const IPAddressV4& addr_2) {
-  return !(addr_1 < addr_2);
-}
 }  // namespace net
+
 }  // namespace hy
 
 namespace std {
 template <>
 struct hash<hy::net::IPAddressV4> {
-  std::size_t operator()(const hy::net::IPAddressV4& addr) const {
-    return addr.hash();
+  std::size_t operator()(const hy::net::IPAddressV4& addr) const noexcept {
+    return std::hash<std::uint32_t>()(addr.addr_.s_addr);
   }
-}; //hash
+};
 }  // namespace std
 
-#endif  //HY_IPADDRESSV4_H_
+#include "impl/IPAddressV4_impl.hpp"
+#endif  // HY_IPADDRESSV4_H_
