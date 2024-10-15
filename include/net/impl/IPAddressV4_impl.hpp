@@ -24,11 +24,11 @@ inline constexpr IPAddressV4::IPAddressV4(std::uint32_t ip) noexcept {
   addr_.s_addr = hy::HboToNbo(ip);
 }
 
-inline constexpr IPAddressV4::IPAddressV4(const address_type& addr) noexcept
+inline constexpr IPAddressV4::IPAddressV4(const ip_type& addr) noexcept
     : addr_{addr} {}
 
 inline constexpr IPAddressV4& IPAddressV4::operator=(
-    const address_type& addr) noexcept {
+    const ip_type& addr) noexcept {
   addr_ = addr;
   return *this;
 }
@@ -41,7 +41,7 @@ inline constexpr ByteArray4 IPAddressV4::toByte() const noexcept {
   return ret;
 }
 
-inline constexpr std::string IPAddressV4::toString() const {
+inline constexpr std::string IPAddressV4::to_string() const {
   std::string ret(kMaxToFullyQualifiedSize, 0);
   ::inet_ntop(AF_INET, std::addressof(addr_), ret.data(), INET_ADDRSTRLEN);
   return ret;
@@ -51,20 +51,20 @@ inline constexpr std::uint32_t IPAddressV4::toHBOLong() const noexcept {
   return hy::NboToHbo(addr_.s_addr);
 }
 
-inline constexpr bool IPAddressV4::isLoopback() const noexcept {
+inline constexpr bool IPAddressV4::is_loopback() const noexcept {
   return (toHBOLong() & 0xFF000001) == 0x7F000001;
 }
 
-inline constexpr bool IPAddressV4::isBroadcast() const noexcept {
+inline constexpr bool IPAddressV4::is_broadcast() const noexcept {
   return (toHBOLong() & 0xFFFFFFFF) == 0xFFFFFFFF;
 }
 
-inline constexpr bool IPAddressV4::isUnspecified() const noexcept {
+inline constexpr bool IPAddressV4::is_unspecified() const noexcept {
   return toHBOLong() == 0x0;
 }
 
-inline constexpr IPAddressV4 IPAddressV4::fromString(std::string_view str) {
-  address_type addr;
+inline constexpr IPAddressV4 IPAddressV4::from_string(std::string_view str) {
+  ip_type addr;
   switch (::inet_pton(AF_INET, str.data(), std::addressof(addr))) {
     case 1:
       return IPAddressV4(addr);
@@ -81,8 +81,8 @@ inline constexpr IPAddressV4 IPAddressV4::fromString(std::string_view str) {
 }
 
 inline constexpr std::expected<IPAddressV4, std::error_code>
-IPAddressV4::fromString(std::string_view str, std::nothrow_t) noexcept {
-  address_type addr;
+IPAddressV4::from_string(std::string_view str, std::nothrow_t) noexcept {
+  ip_type addr;
   switch (::inet_pton(AF_INET, str.data(), std::addressof(addr))) {
     case 1:
       return std::expected<IPAddressV4, std::error_code>{addr};
@@ -129,7 +129,7 @@ inline constexpr bool operator>(const IPAddressV4& lhs,
 
 inline constexpr std::ostream& operator<<(std::ostream& os,
                                           const IPAddressV4& ip) {
-  return os << ip.toString();
+  return os << ip.to_string();
 }
 
 /*127.0.0.1*/

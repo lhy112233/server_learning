@@ -61,7 +61,7 @@ class AsyncBaseOp {
   virtual AsyncIOOp* getAsyncIOOp() = 0;
   virtual IoUringOp* getIoUringOp() = 0;
 
-  virtual void toString(std::ostream& os) const = 0;
+  virtual void to_string(std::ostream& os) const = 0;
 
   State state() const noexcept { return state_; }
 

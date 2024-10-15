@@ -41,7 +41,7 @@ using ByteArray16 = std::array<std::uint8_t, 16>;
 
 class IPAddressV6 final {
  public:
-  using address_type = ::in6_addr;
+  using ip_type = ::in6_addr;
   using scope_type = std::uint16_t;
 
   constexpr IPAddressV6() noexcept;
@@ -53,24 +53,24 @@ class IPAddressV6 final {
 
   constexpr IPAddressV6(std::span<const std::uint8_t, 16> byte,
                         scope_type scope = 0) noexcept;
-  constexpr IPAddressV6(const address_type& addr,
+  constexpr IPAddressV6(const ip_type& addr,
                         scope_type scope = 0) noexcept;
 
   constexpr scope_type getScope() const noexcept { return scope_; }
   constexpr void setScope(scope_type scope) noexcept { scope_ = scope; }
 
   constexpr ByteArray16 toByte() const noexcept;
-  constexpr std::string toString() const;
+  constexpr std::string to_string() const;
 
-  constexpr bool isLoopback() const noexcept;
-  constexpr bool isBroadcast() const noexcept;
-  constexpr bool isUnspecified() const noexcept;
+  constexpr bool is_loopback() const noexcept;
+  constexpr bool is_broadcast() const noexcept;
+  constexpr bool is_unspecified() const noexcept;
 
-  constexpr static std::expected<IPAddressV6, std::error_code> fromString(
+  constexpr static std::expected<IPAddressV6, std::error_code> from_string(
       std::string_view str, scope_type scope,
       const std::nothrow_t& tag) noexcept;
 
-  constexpr static IPAddressV6 fromString(std::string_view str,
+  constexpr static IPAddressV6 from_string(std::string_view str,
                                           scope_type scope = 0);
 
   friend constexpr bool operator<(const IPAddressV6& lhs,
@@ -92,7 +92,7 @@ class IPAddressV6 final {
                                    const IPAddressV6& rhs) noexcept;
 
  private:
-  address_type addr_{0};
+  ip_type addr_{0};
   scope_type scope_{0};
 };
 

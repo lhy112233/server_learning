@@ -32,7 +32,7 @@ class IPAddressV4 final {
   friend class std::hash<hy::net::IPAddressV4>;
 
  public:
-  using address_type = typename ::in_addr;
+  using ip_type = typename ::in_addr;
 
   static constexpr std::size_t kMaxToFullyQualifiedSize =
       4 /*words*/ * 3 /*max chars per word*/ + 3 /*separators*/;
@@ -46,20 +46,20 @@ class IPAddressV4 final {
 
   constexpr IPAddressV4(std::span<const std::uint8_t, 4> byte) noexcept;
   explicit constexpr IPAddressV4(std::uint32_t ip) noexcept;
-  explicit constexpr IPAddressV4(const address_type& addr) noexcept;
+  explicit constexpr IPAddressV4(const ip_type& addr) noexcept;
 
-  constexpr IPAddressV4& operator=(const address_type&) noexcept;
+  constexpr IPAddressV4& operator=(const ip_type&) noexcept;
 
   constexpr ByteArray4 toByte() const noexcept;
-  constexpr std::string toString() const;
+  constexpr std::string to_string() const;
   constexpr std::uint32_t toHBOLong() const noexcept;
 
-  constexpr bool isLoopback() const noexcept;
-  constexpr bool isBroadcast() const noexcept;
-  constexpr bool isUnspecified() const noexcept;
+  constexpr bool is_loopback() const noexcept;
+  constexpr bool is_broadcast() const noexcept;
+  constexpr bool is_unspecified() const noexcept;
 
-  static constexpr IPAddressV4 fromString(std::string_view str);
-  static constexpr std::expected<IPAddressV4, std::error_code> fromString(
+  static constexpr IPAddressV4 from_string(std::string_view str);
+  static constexpr std::expected<IPAddressV4, std::error_code> from_string(
       std::string_view str, std::nothrow_t) noexcept;
 
   friend constexpr bool operator<(const IPAddressV4& lhs,
@@ -81,13 +81,12 @@ class IPAddressV4 final {
                                   const IPAddressV4& rhs) noexcept;
 
  private:
-  address_type addr_;
+  ip_type addr_;
 };
 
-// template <typename... Args>
-//   requires std::is_constructible_v<IPAddressV4, Args&&...>
-// constexpr IPAddressV4 makeIPAddressV4(Args&&... args) noexcept(
-//     std::is_nothrow_constructible_v<IPAddressV4, Args&&...>);
+template <typename... Args>
+constexpr IPAddressV4 makeIPAddressV4(Args&&... args);
+ 
 
 // template <typename... Args>
 //     requires std::is_constructible_v<IPAddressV4, Args&&...>

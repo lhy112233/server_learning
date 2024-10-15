@@ -26,59 +26,59 @@ inline constexpr IPAddress& IPAddress::operator=(
 }
 
 inline constexpr IPAddress::IPAddress(
-    const hy::net::IPAddressV4::address_type& addr) noexcept
+    const hy::net::IPAddressV4::ip_type& addr) noexcept
     : ipv4{addr}, type_{IPAddressType::IPV4} {}
 
 inline constexpr IPAddress::IPAddress(
-    const hy::net::IPAddressV6::address_type& addr,
+    const hy::net::IPAddressV6::ip_type& addr,
     std::uint16_t scope) noexcept
     : ipv6{addr}, type_{IPAddressType::IPV6} {}
 
 inline constexpr IPAddress& IPAddress::operator=(
-    const hy::net::IPAddressV4::address_type& addr) noexcept {
+    const hy::net::IPAddressV4::ip_type& addr) noexcept {
   ipv4 = addr;
   type_ = IPAddressType::IPV4;
   return *this;
 }
 
 inline constexpr IPAddress& IPAddress::operator=(
-    const hy::net::IPAddressV6::address_type& addr) noexcept {
+    const hy::net::IPAddressV6::ip_type& addr) noexcept {
   ipv6 = addr;
   type_ = IPAddressType::IPV6;
   return *this;
 }
 
-inline constexpr std::string IPAddress::toString() const {
-  return isV4() ? ipv4.toString() : ipv6.toString();
+inline constexpr std::string IPAddress::to_string() const {
+  return is_v4() ? ipv4.to_string() : ipv6.to_string();
 }
 
-inline constexpr bool IPAddress::isV4() const noexcept {
+inline constexpr bool IPAddress::is_v4() const noexcept {
   return type_ == IPAddressType::IPV4;
 }
 
-inline constexpr bool IPAddress::isV6() const noexcept {
+inline constexpr bool IPAddress::is_v6() const noexcept {
   return type_ == IPAddressType::IPV6;
 }
 
-inline constexpr IPAddress::IPAddressType IPAddress::Type() const noexcept {
+inline constexpr IPAddress::IPAddressType IPAddress::ip_type() const noexcept {
   return type_;
 }
 
-inline constexpr bool IPAddress::isLoopback() const noexcept {
-  return isV4() ? ipv4.isLoopback() : ipv6.isLoopback();
+inline constexpr bool IPAddress::is_loopback() const noexcept {
+  return is_v4() ? ipv4.is_loopback() : ipv6.is_loopback();
 }
 
-inline constexpr bool IPAddress::isBroadcast() const noexcept {
-  return isV4() ? ipv4.isBroadcast() : ipv6.isBroadcast();
+inline constexpr bool IPAddress::is_broadcast() const noexcept {
+  return is_v4() ? ipv4.is_broadcast() : ipv6.is_broadcast();
 }
 
-inline constexpr bool IPAddress::isUnspecified() const noexcept {
-  return isV4() ? ipv4.isUnspecified() : ipv6.isUnspecified();
+inline constexpr bool IPAddress::is_unspecified() const noexcept {
+  return is_v4() ? ipv4.is_unspecified() : ipv6.is_unspecified();
 }
 
-inline constexpr IPAddress IPAddress::fromString(std::string_view str,
+inline constexpr IPAddress IPAddress::from_string(std::string_view str,
                                                  std::uint16_t args) {
-  auto addr = fromStringNothrow(str, args);
+  auto addr = from_string_nothrow(str, args);
   if (addr.has_value()) {
     return addr.value();
   } else {
@@ -87,24 +87,24 @@ inline constexpr IPAddress IPAddress::fromString(std::string_view str,
 }
 
 inline constexpr std::expected<IPAddress, std::error_code>
-IPAddress::fromStringNothrow(std::string_view str, std::size_t args) noexcept {
+IPAddress::from_string_nothrow(std::string_view str, std::size_t args) noexcept {
   std::expected<IPAddress, std::error_code> ret =
-      IPAddressV4::fromString(str, std::nothrow);
+      IPAddressV4::from_string(str, std::nothrow);
   if (ret.has_value() ||
       ret.error() ==
           std::make_error_code(std::errc::address_family_not_supported)) {
     return ret;
   } else {
-    ret = IPAddressV6::fromString(str, args, std::nothrow);
+    ret = IPAddressV6::from_string(str, args, std::nothrow);
     return ret;
   }
 };
 
 inline constexpr bool operator==(const IPAddress& lhs,
                                  const IPAddress& rhs) noexcept {
-  if (lhs.Type() != lhs.Type()) {
+  if (lhs.ip_type() != lhs.ip_type()) {
     return false;
-  } else if (lhs.Type() == IPAddress::IPAddressType::IPV4) {
+  } else if (lhs.ip_type() == IPAddress::IPAddressType::IPV4) {
     return lhs.ipv4 == rhs.ipv4;
   } else {
     return lhs.ipv4 == rhs.ipv6;
@@ -117,9 +117,9 @@ inline constexpr bool operator!=(const IPAddress& lhs,
 }
 
 inline constexpr bool operator<(const IPAddress& lhs, const IPAddress& rhs) {
-  if (lhs.Type() != rhs.Type()) {
+  if (lhs.ip_type() != rhs.ip_type()) {
     throw std::invalid_argument{"IPAddress's interargument is unsame type"};
-  } else if (lhs.Type() == IPAddress::IPAddressType::IPV4) {
+  } else if (lhs.ip_type() == IPAddress::IPAddressType::IPV4) {
     return lhs.ipv4 < rhs.ipv4;
   } else {
     return lhs.ipv6 < rhs.ipv6;
@@ -140,7 +140,7 @@ inline constexpr bool operator>=(const IPAddress& lhs, const IPAddress& rhs) {
 
 inline constexpr std::ostream& operator<<(std::ostream& os,
                                           const IPAddress& ip) {
-  return os << ip.toString();
+  return os << ip.to_string();
 }
 
 /*广播*/

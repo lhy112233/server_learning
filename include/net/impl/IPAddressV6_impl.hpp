@@ -23,7 +23,7 @@ inline constexpr IPAddressV6::IPAddressV6() noexcept : scope_{0} {
   hy::MemZero(addr_);
 }
 
-inline constexpr IPAddressV6::IPAddressV6(const address_type& addr,
+inline constexpr IPAddressV6::IPAddressV6(const ip_type& addr,
                                           scope_type scope) noexcept
     : addr_{addr}, scope_(scope) {}
 
@@ -33,7 +33,7 @@ inline constexpr ByteArray16 IPAddressV6::toByte() const noexcept {
   return ret;
 }
 
-inline constexpr std::string IPAddressV6::toString() const {
+inline constexpr std::string IPAddressV6::to_string() const {
   constexpr std::size_t kMaxSize = 45;
   std::string ret(kMaxSize, 0);
   ::inet_ntop(AF_INET6, addr_.s6_addr, ret.data(), INET6_ADDRSTRLEN);
@@ -41,9 +41,9 @@ inline constexpr std::string IPAddressV6::toString() const {
 }
 
 inline constexpr std::expected<IPAddressV6, std::error_code>
-IPAddressV6::fromString(std::string_view str, scope_type scope,
+IPAddressV6::from_string(std::string_view str, scope_type scope,
                         const std::nothrow_t& tag) noexcept {
-  address_type addr;
+  ip_type addr;
   switch (::inet_pton(AF_INET6, str.data(), std::addressof(addr))) {
     case 1:
       return IPAddressV6{addr, scope};
@@ -58,9 +58,9 @@ IPAddressV6::fromString(std::string_view str, scope_type scope,
   }
 }
 
-inline constexpr IPAddressV6 IPAddressV6::fromString(std::string_view str,
+inline constexpr IPAddressV6 IPAddressV6::from_string(std::string_view str,
                                                      scope_type scope) {
-  address_type addr;
+  ip_type addr;
   switch (::inet_pton(AF_INET6, str.data(), std::addressof(addr))) {
     case 1:
       return IPAddressV6(addr, scope);
@@ -84,19 +84,19 @@ inline constexpr IPAddressV6 BroadcastV6 =
     IPAddressV6{ByteArray16{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 
-inline constexpr bool IPAddressV6::isLoopback() const noexcept {
+inline constexpr bool IPAddressV6::is_loopback() const noexcept {
   return LoopbackV6 == *this;
 }
 
-inline constexpr bool IPAddressV6::isBroadcast() const noexcept {
+inline constexpr bool IPAddressV6::is_broadcast() const noexcept {
   return BroadcastV6 == *this;
 }
 
-inline constexpr bool IPAddressV6::isUnspecified() const noexcept {
+inline constexpr bool IPAddressV6::is_unspecified() const noexcept {
   return IPAddressV6{} == *this;
 }
 
-// inline constexpr bool IPAddressV6::isUnspecified() const noexcept {
+// inline constexpr bool IPAddressV6::is_unspecified() const noexcept {
 //   return false;
 // }
 
@@ -141,7 +141,7 @@ inline constexpr bool operator>=(const IPAddressV6& lhs,
 
 inline constexpr std::ostream& operator<<(std::ostream& os,
                                           const IPAddressV6& ip) {
-  return os << ip.toString();
+  return os << ip.to_string();
 }
 
 }  // namespace net

@@ -1468,7 +1468,7 @@ class expected final : public details::ExpectedStorage<V, E> {
   using base = typename details::ExpectedStorage<V, E>;
 
  public:
-  /*Type members*/
+  /*ip_type members*/
   using value_type = V;
   using error_type = E;
   using unexpected_type = hy::unexpected<E>;

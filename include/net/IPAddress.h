@@ -51,29 +51,27 @@ class IPAddress {
   constexpr IPAddress& operator=(const IPAddressV4& addr) noexcept;
   constexpr IPAddress& operator=(const IPAddressV6& addr) noexcept;
 
-  constexpr IPAddress(const hy::net::IPAddressV4::address_type& addr) noexcept;
-  constexpr IPAddress(const hy::net::IPAddressV6::address_type& addr,
+  constexpr IPAddress(const hy::net::IPAddressV4::ip_type& addr) noexcept;
+  constexpr IPAddress(const hy::net::IPAddressV6::ip_type& addr,
                       std::uint16_t scope) noexcept;
   constexpr IPAddress& operator=(
-      const hy::net::IPAddressV4::address_type& addr) noexcept;
+      const hy::net::IPAddressV4::ip_type& addr) noexcept;
   constexpr IPAddress& operator=(
-      const hy::net::IPAddressV6::address_type& addr) noexcept;
+      const hy::net::IPAddressV6::ip_type& addr) noexcept;
 
-  constexpr std::expected<std::string, std::error_code> toString(
-      const std::nothrow_t&) const noexcept;
-  constexpr std::string toString() const;
+  constexpr std::string to_string() const;
 
-  constexpr bool isV4() const noexcept;
-  constexpr bool isV6() const noexcept;
-  constexpr IPAddressType Type() const noexcept;
+  constexpr bool is_v4() const noexcept;
+  constexpr bool is_v6() const noexcept;
+  constexpr IPAddressType ip_type() const noexcept;
 
-  constexpr bool isLoopback() const noexcept;
-  constexpr bool isBroadcast() const noexcept;
-  constexpr bool isUnspecified() const noexcept;
+  constexpr bool is_loopback() const noexcept;
+  constexpr bool is_broadcast() const noexcept;
+  constexpr bool is_unspecified() const noexcept;
 
-  static constexpr IPAddress fromString(std::string_view str,
+  static constexpr IPAddress from_string(std::string_view str,
                                         std::uint16_t args = 0);
-  static constexpr std::expected<IPAddress, std::error_code> fromStringNothrow(
+  static constexpr std::expected<IPAddress, std::error_code> from_string_nothrow(
       std::string_view str, std::size_t args) noexcept;
 
   friend constexpr bool operator==(const IPAddress& lhs,
