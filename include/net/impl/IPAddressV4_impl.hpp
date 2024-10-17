@@ -52,7 +52,7 @@ inline constexpr std::uint32_t IPAddressV4::toHBOLong() const noexcept {
 }
 
 inline constexpr bool IPAddressV4::is_loopback() const noexcept {
-  return (toHBOLong() & 0xFF000001) == 0x7F000001;
+  return (toHBOLong() & 0xFF000000) == 0x7F000000;
 }
 
 inline constexpr bool IPAddressV4::is_broadcast() const noexcept {

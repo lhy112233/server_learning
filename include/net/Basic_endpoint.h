@@ -2,22 +2,25 @@
 #define HY_BASIC_ENDPOINT_H_
 #include <cstdint>
 #include <cstddef>
+#include "Net_type.hpp"
 
 
 namespace hy{
     namespace net{
-        using port_type = std::uint16_t;
         
         template <typename InternetProtocol>
         class basic_endpoint {
             public:
-
+            using protocol_type = InternetProtocol;
+            using data_type = socket_addr_type;
 
             basic_endpoint() noexcept;
 
 
+
+
             private:
-            hy::net::port_type port_;
+            ::hy::net::detail::Endpoint impl_;
 
         };
     }

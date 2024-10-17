@@ -41,7 +41,7 @@ using ByteArray16 = std::array<std::uint8_t, 16>;
 
 class IPAddressV6 final {
  public:
-  using ip_type = ::in6_addr;
+  using ip_type = ::in6_addr_type;
   using scope_type = std::uint16_t;
 
   constexpr IPAddressV6() noexcept;

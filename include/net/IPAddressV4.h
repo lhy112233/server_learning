@@ -15,24 +15,22 @@
 #include <netinet/in.h>
 #endif
 
+namespace hy {
+namespace net {
 /*Forward declare*/
 class IPAddress;
 class IPAddressV4;
 class IPAddressV6;
 class MacAddress;
 
-using CIDRNetworkV4 = std::pair<IPAddressV4, std::uint8_t>;
-
-namespace hy {
-namespace net {
-  class IPAddressV4;
+using CIDRNetworkV4 = std::pair<hy::net::IPAddressV4, std::uint8_t>;
 using ByteArray4 = std::array<std::uint8_t, 4>;
 
 class IPAddressV4 final {
   friend class std::hash<hy::net::IPAddressV4>;
 
  public:
-  using ip_type = typename ::in_addr;
+  using ip_type = typename ::in_addr_type;
 
   static constexpr std::size_t kMaxToFullyQualifiedSize =
       4 /*words*/ * 3 /*max chars per word*/ + 3 /*separators*/;
@@ -86,7 +84,6 @@ class IPAddressV4 final {
 
 template <typename... Args>
 constexpr IPAddressV4 makeIPAddressV4(Args&&... args);
- 
 
 // template <typename... Args>
 //     requires std::is_constructible_v<IPAddressV4, Args&&...>
@@ -94,7 +91,6 @@ constexpr IPAddressV4 makeIPAddressV4(Args&&... args);
 // makeIPAddressV4(Args&&...args, const std::nothrow_t&) noexcept;
 
 constexpr std::ostream& operator<<(std::ostream& os, const IPAddressV4& ip);
-
 
 }  // namespace net
 

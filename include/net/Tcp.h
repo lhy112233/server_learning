@@ -6,7 +6,8 @@ namespace hy{
     namespace net{
         class Tcp{
             public:
-
+            using basic_endpoint<tcp> endpoint;
+            
 
 
 

@@ -12,10 +12,7 @@
 #include "IPAddressV4.h"
 #include "IPAddressV6.h"
 
-#ifdef __linux
-#include <sys/socket.h>
-
-#endif  //__linux
+#include "Net_type.hpp"
 
 namespace hy {
 namespace net {
