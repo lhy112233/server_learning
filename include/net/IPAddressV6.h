@@ -20,11 +20,7 @@
 #include "Unit.hpp"
 #include "Utility.hpp"
 
-#ifdef __linux
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#endif
+#include "Net_type.hpp"
 
 namespace hy {
 namespace net {

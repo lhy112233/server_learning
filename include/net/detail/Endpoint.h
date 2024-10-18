@@ -17,13 +17,11 @@ class Endpoint {
 
   constexpr Endpoint(const IPAddress& addr, port_type port) noexcept;
 
-  constexpr Endpoint(const Endpoint& rhs) noexcept;
-
-  constexpr Endpoint(Endpoint&& rhs) noexcept;
-
-  constexpr Endpoint& operator=(const Endpoint& rhs) noexcept;
-
-  constexpr Endpoint& operator=(Endpoint&& rhs) noexcept;
+  constexpr Endpoint(const Endpoint& rhs) noexcept = default;
+  constexpr Endpoint(Endpoint&& rhs) noexcept = default;
+  constexpr Endpoint& operator=(const Endpoint& rhs) noexcept = default;
+  constexpr Endpoint& operator=(Endpoint&& rhs) noexcept = default;
+  constexpr ~Endpoint() = default;
 
   constexpr sockaddr* data() noexcept;
 

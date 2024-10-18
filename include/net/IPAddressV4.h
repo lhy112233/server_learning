@@ -11,9 +11,7 @@
 #include <system_error>
 #include <type_traits>
 
-#ifdef __linux
-#include <netinet/in.h>
-#endif
+#include "Net_type.hpp"
 
 namespace hy {
 namespace net {
@@ -30,7 +28,7 @@ class IPAddressV4 final {
   friend class std::hash<hy::net::IPAddressV4>;
 
  public:
-  using ip_type = typename ::in_addr_type;
+  using ip_type = ::in_addr_type;
 
   static constexpr std::size_t kMaxToFullyQualifiedSize =
       4 /*words*/ * 3 /*max chars per word*/ + 3 /*separators*/;
