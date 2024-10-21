@@ -17,6 +17,7 @@ using in_addr_type = ::in_addr;
 using in6_addr_type = ::in6_addr;
 using addrinfo_type = ::addrinfo;
 using sockaddr_port_type = ::in_port_t;
+using sockaddr_scope_id_type = ::std::uint32_t;
 
 inline constexpr sockaddr_family_type family_v4 = AF_INET;
 inline constexpr sockaddr_family_type family_v6 = AF_INET6;

@@ -42,7 +42,7 @@ inline constexpr std::string IPAddressV6::to_string() const {
 
 inline constexpr std::expected<IPAddressV6, std::error_code>
 IPAddressV6::from_string(std::string_view str, scope_type scope,
-                        const std::nothrow_t& tag) noexcept {
+                         const std::nothrow_t& tag) noexcept {
   ip_type addr;
   switch (::inet_pton(AF_INET6, str.data(), std::addressof(addr))) {
     case 1:
@@ -59,7 +59,7 @@ IPAddressV6::from_string(std::string_view str, scope_type scope,
 }
 
 inline constexpr IPAddressV6 IPAddressV6::from_string(std::string_view str,
-                                                     scope_type scope) {
+                                                      scope_type scope) {
   ip_type addr;
   switch (::inet_pton(AF_INET6, str.data(), std::addressof(addr))) {
     case 1:
@@ -77,8 +77,8 @@ inline constexpr IPAddressV6 IPAddressV6::from_string(std::string_view str,
 
 /*::1*/
 inline constexpr IPAddressV6 LoopbackV6 =
-    IPAddressV6{ByteArray16{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+    IPAddressV6{ByteArray16{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
 /*ff:ff:ff:ff:ff:ff*/
 inline constexpr IPAddressV6 BroadcastV6 =
     IPAddressV6{ByteArray16{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

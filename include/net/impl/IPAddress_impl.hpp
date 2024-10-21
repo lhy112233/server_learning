@@ -31,7 +31,7 @@ inline constexpr IPAddress::IPAddress(
 
 inline constexpr IPAddress::IPAddress(
     const hy::net::IPAddressV6::ip_type& addr,
-    std::uint16_t scope) noexcept
+    sockaddr_scope_id_type scope) noexcept
     : ipv6{addr}, type_{IPAddressType::IPV6} {}
 
 inline constexpr IPAddress& IPAddress::operator=(

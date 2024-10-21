@@ -50,7 +50,7 @@ class IPAddress {
 
   constexpr IPAddress(const hy::net::IPAddressV4::ip_type& addr) noexcept;
   constexpr IPAddress(const hy::net::IPAddressV6::ip_type& addr,
-                      std::uint16_t scope) noexcept;
+                      sockaddr_scope_id_type scope) noexcept;
   constexpr IPAddress& operator=(
       const hy::net::IPAddressV4::ip_type& addr) noexcept;
   constexpr IPAddress& operator=(

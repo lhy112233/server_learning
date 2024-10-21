@@ -42,14 +42,18 @@ class Endpoint {
 
   constexpr sockaddr_family_type get_family() const noexcept;
 
+  constexpr std::string to_string() const;
+
+  constexpr IPAddress to_ipaddress() const noexcept;
+
   friend constexpr bool operator==(const Endpoint& lhs,
                                    const Endpoint& rhs) noexcept;
 
   friend constexpr bool operator<(const Endpoint& lhs,
                                   const Endpoint& rhs) noexcept;
 
-  friend constexpr std::ostream operator<<(std::ostream& os,
-                                           const Endpoint& endpoint) noexcept;
+  friend constexpr std::ostream& operator<<(std::ostream& os,
+                                            const Endpoint& endpoint) noexcept;
 
  private:
   union {

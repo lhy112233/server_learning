@@ -1,6 +1,7 @@
 #ifndef ENDPOINT_IMPL_HPP_
 #define ENDPOINT_IMPL_HPP_
 #include <cstring>
+#include <format>
 #include <stdexcept>
 #include <system_error>
 #include "Endpoint.h"
@@ -12,14 +13,14 @@ namespace net {
 namespace detail {
 inline constexpr Endpoint::Endpoint(sockaddr_family_type family,
                                     sockaddr_port_type port) {
-  MemZero(*this);
+  MemZero(data_);
   switch (family) {
     case family_v4:
-      data_.ipv4.sin_family = family;
+      data_.ipv4.sin_family = family_v4;
       data_.ipv4.sin_port = host_to_network(port);
       break;
     case family_v6:
-      data_.ipv6.sin6_family = family;
+      data_.ipv6.sin6_family = family_v6;
       data_.ipv6.sin6_port = host_to_network(port);
       break;
     default:
@@ -39,7 +40,7 @@ inline constexpr Endpoint::Endpoint(const IPAddress& addr,
                 sizeof(byte_array));
   } else {
     data_.ipv6.sin6_family = family_v6;
-    data_.ipv6.sin6_family = host_to_network(port);
+    data_.ipv6.sin6_port = host_to_network(port);
     auto byte_array = addr.to_v6().toByte();
     std::memcpy(std::addressof(data_.ipv6.sin6_addr),
                 std::addressof(byte_array), sizeof(byte_array));
@@ -82,6 +83,37 @@ inline constexpr bool Endpoint::is_v6() const noexcept {
 
 inline constexpr sockaddr_family_type Endpoint::get_family() const noexcept {
   return data_.base.sa_family;
+}
+
+constexpr std::string Endpoint::to_string() const {
+  if (is_v4()) {
+    return std::format("{}:{}", IPAddressV4{data_.ipv4.sin_addr}.to_string(),
+                       get_port());
+  } else {
+    return std::format("[{}]:{}", IPAddressV6{data_.ipv6.sin6_addr}.to_string(),
+                       get_port());
+  }
+}
+
+inline constexpr IPAddress Endpoint::to_ipaddress() const noexcept {
+  if (is_v4()) {
+    return IPAddress{data_.ipv4.sin_addr};
+  } else {
+    return IPAddress{data_.ipv6.sin6_addr, data_.ipv6.sin6_scope_id};
+  }
+}
+
+constexpr std::ostream& operator<<(std::ostream& os,
+                                   const Endpoint& endpoint) noexcept {
+  return (os << endpoint.to_string());
+}
+
+constexpr bool operator==(const Endpoint& lhs, const Endpoint& rhs) noexcept {
+  return lhs.to_ipaddress() == rhs.to_ipaddress();
+}
+
+constexpr bool operator<(const Endpoint& lhs, const Endpoint& rhs) noexcept {
+  return lhs.to_ipaddress() < rhs.to_ipaddress();
 }
 
 }  // namespace detail
