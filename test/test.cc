@@ -12,11 +12,12 @@
 #include "IPAddressV6.h"
 #include "IPAddressV4.h"
 #include "IPAddress.h"
+#include "Endpoint.h"
 using namespace hy;
 using namespace hy::net;
 
 
 int main() {
-    IPAddressV4 v4 = IPAddressV4::from_string("127.0.0.1");
-    std::cout << v4.is_loopback();
+    IPAddress addr = IPAddressV4::from_string("1.1.1.1");
+    hy::net::detail::Endpoint point{addr,12};
 }

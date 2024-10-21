@@ -21,7 +21,7 @@ inline constexpr IPAddressV4::IPAddressV4(
 
 inline constexpr IPAddressV4::IPAddressV4(std::uint32_t ip) noexcept {
   // in_addr_t  == std::uint32_t
-  addr_.s_addr = hy::HboToNbo(ip);
+  addr_.s_addr = hy::host_to_network(ip);
 }
 
 inline constexpr IPAddressV4::IPAddressV4(const ip_type& addr) noexcept
@@ -48,7 +48,7 @@ inline constexpr std::string IPAddressV4::to_string() const {
 }
 
 inline constexpr std::uint32_t IPAddressV4::toHBOLong() const noexcept {
-  return hy::NboToHbo(addr_.s_addr);
+  return hy::network_to_host(addr_.s_addr);
 }
 
 inline constexpr bool IPAddressV4::is_loopback() const noexcept {

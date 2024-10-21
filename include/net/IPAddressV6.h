@@ -37,7 +37,7 @@ using ByteArray16 = std::array<std::uint8_t, 16>;
 
 class IPAddressV6 final {
  public:
-  using ip_type = ::in6_addr_type;
+  using ip_type = in6_addr_type;
   using scope_type = std::uint16_t;
 
   constexpr IPAddressV6() noexcept;
@@ -52,8 +52,8 @@ class IPAddressV6 final {
   constexpr IPAddressV6(const ip_type& addr,
                         scope_type scope = 0) noexcept;
 
-  constexpr scope_type getScope() const noexcept { return scope_; }
-  constexpr void setScope(scope_type scope) noexcept { scope_ = scope; }
+  constexpr scope_type get_scope() const noexcept { return scope_; }
+  constexpr void set_scope(scope_type scope) noexcept { scope_ = scope; }
 
   constexpr ByteArray16 toByte() const noexcept;
   constexpr std::string to_string() const;
@@ -112,7 +112,7 @@ struct hash<hy::net::IPAddressV6> {
   constexpr std::size_t operator()(
       const hy::net::IPAddressV6& addr) const noexcept {
     auto bytes = addr.toByte();
-    std::size_t result = static_cast<std::size_t>(addr.getScope());
+    std::size_t result = static_cast<std::size_t>(addr.get_scope());
     combine_4_bytes(result, &bytes[0]);
     combine_4_bytes(result, &bytes[4]);
     combine_4_bytes(result, &bytes[8]);

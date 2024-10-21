@@ -55,7 +55,7 @@ void check(int judge, F&& f, Args&&... args) noexcept(
 }
 
 template<typename T>
-inline constexpr auto NboToHbo(const T& src) noexcept {
+inline constexpr auto network_to_host(const T& src) noexcept {
   if constexpr (std::endian::big == std::endian::native) {
     return src;
   } else  if constexpr(std::endian::little == std::endian::native) {
@@ -66,8 +66,8 @@ inline constexpr auto NboToHbo(const T& src) noexcept {
 }
 
 template<typename T>
-inline constexpr auto HboToNbo(const T& src) noexcept {
-  return NboToHbo(src);
+inline constexpr auto host_to_network(const T& src) noexcept {
+  return network_to_host(src);
 }
 
 

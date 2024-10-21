@@ -52,6 +52,14 @@ inline constexpr std::string IPAddress::to_string() const {
   return is_v4() ? ipv4.to_string() : ipv6.to_string();
 }
 
+inline constexpr IPAddressV4 IPAddress::to_v4() const {
+  return ipv4;
+}
+
+inline constexpr IPAddressV6 IPAddress::to_v6() const {
+  return ipv6;
+}
+
 inline constexpr bool IPAddress::is_v4() const noexcept {
   return type_ == IPAddressType::IPV4;
 }

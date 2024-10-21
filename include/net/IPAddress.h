@@ -58,6 +58,9 @@ class IPAddress {
 
   constexpr std::string to_string() const;
 
+  constexpr IPAddressV4 to_v4() const;
+  constexpr IPAddressV6 to_v6() const;
+
   constexpr bool is_v4() const noexcept;
   constexpr bool is_v6() const noexcept;
   constexpr IPAddressType ip_type() const noexcept;

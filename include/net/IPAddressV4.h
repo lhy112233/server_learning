@@ -28,7 +28,7 @@ class IPAddressV4 final {
   friend class std::hash<hy::net::IPAddressV4>;
 
  public:
-  using ip_type = ::in_addr_type;
+  using ip_type = in_addr_type;
 
   static constexpr std::size_t kMaxToFullyQualifiedSize =
       4 /*words*/ * 3 /*max chars per word*/ + 3 /*separators*/;

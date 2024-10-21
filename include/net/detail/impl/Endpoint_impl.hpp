@@ -1,72 +1,91 @@
 #ifndef ENDPOINT_IMPL_HPP_
 #define ENDPOINT_IMPL_HPP_
+#include <cstring>
+#include <stdexcept>
+#include <system_error>
 #include "Endpoint.h"
+#include "Net_type.hpp"
+#include "Utility.hpp"
 
-namespace hy{
-    namespace net{
-        namespace detail{
-            inline constexpr Endpoint::Endpoint(family_type family, port_type port) noexcept{
-
-            }
-inline constexpr Endpoint::Endpoint(const IPAddress & addr, port_type port) noexcept
-{
+namespace hy {
+namespace net {
+namespace detail {
+inline constexpr Endpoint::Endpoint(sockaddr_family_type family,
+                                    sockaddr_port_type port) {
+  MemZero(*this);
+  switch (family) {
+    case family_v4:
+      data_.ipv4.sin_family = family;
+      data_.ipv4.sin_port = host_to_network(port);
+      break;
+    case family_v6:
+      data_.ipv6.sin6_family = family;
+      data_.ipv6.sin6_port = host_to_network(port);
+      break;
+    default:
+      throw std::system_error{
+          std::make_error_code(std::errc::address_family_not_supported)};
+      break;
+  }
 }
 
-inline constexpr sockaddr * Endpoint::data() noexcept
-{
-return nullptr;
+inline constexpr Endpoint::Endpoint(const IPAddress& addr,
+                                    sockaddr_port_type port) noexcept {
+  if (addr.is_v4()) {
+    data_.ipv4.sin_family = family_v4;
+    data_.ipv4.sin_port = host_to_network(port);
+    auto byte_array = addr.to_v4().toByte();
+    std::memcpy(std::addressof(data_.ipv4.sin_addr), std::addressof(byte_array),
+                sizeof(byte_array));
+  } else {
+    data_.ipv6.sin6_family = family_v6;
+    data_.ipv6.sin6_family = host_to_network(port);
+    auto byte_array = addr.to_v6().toByte();
+    std::memcpy(std::addressof(data_.ipv6.sin6_addr),
+                std::addressof(byte_array), sizeof(byte_array));
+    data_.ipv6.sin6_scope_id = addr.to_v6().get_scope();
+  }
 }
 
-inline constexpr const sockaddr * Endpoint::data() const noexcept
-{
-return nullptr;
+inline constexpr sockaddr* Endpoint::data() noexcept {
+  return std::addressof(data_.base);
 }
 
-inline constexpr std::size_t Endpoint::size() const noexcept
-{
-return std::size_t();
+inline constexpr const sockaddr* Endpoint::data() const noexcept {
+  return std::addressof(data_.base);
 }
 
-inline constexpr port_type Endpoint::get_port() const noexcept
-{
-return port_type();
+inline constexpr std::size_t Endpoint::size() const noexcept {
+  return is_v4() ? sizeof(sockaddr_v4_type) : sizeof(sockaddr_v6_type);
 }
 
-inline constexpr void Endpoint::set_port(port_type port) noexcept
-{
+inline constexpr sockaddr_port_type Endpoint::get_port() const noexcept {
+  return is_v4() ? network_to_host(data_.ipv4.sin_port)
+                 : network_to_host(data_.ipv6.sin6_port);
 }
 
-inline constexpr bool Endpoint::is_v4() const noexcept
-{
-return false;
+inline constexpr void Endpoint::set_port(sockaddr_port_type port) noexcept {
+  if (is_v4()) {
+    data_.ipv4.sin_port = host_to_network(port);
+  } else {
+    data_.ipv6.sin6_port = host_to_network(port);
+  }
 }
 
-inline constexpr bool Endpoint::is_v6() const noexcept
-{
-return false;
+inline constexpr bool Endpoint::is_v4() const noexcept {
+  return data_.base.sa_family == family_v4;
 }
 
-inline constexpr family_type Endpoint::get_family() const noexcept
-{
-return family_type();
+inline constexpr bool Endpoint::is_v6() const noexcept {
+  return data_.base.sa_family == family_v6;
 }
 
-
-
-        }
-    }
+inline constexpr sockaddr_family_type Endpoint::get_family() const noexcept {
+  return data_.base.sa_family;
 }
 
-
-
-
-
-
-
-
-
-
-
-
+}  // namespace detail
+}  // namespace net
+}  // namespace hy
 
 #endif  //ENDPOINT_IMPL_HPP_
