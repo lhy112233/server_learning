@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+auto a = socket();
 namespace hy {
 namespace net {
 using sockaddr_type = ::sockaddr;
@@ -18,6 +19,9 @@ using in6_addr_type = ::in6_addr;
 using addrinfo_type = ::addrinfo;
 using sockaddr_port_type = ::in_port_t;
 using sockaddr_scope_id_type = ::std::uint32_t;
+
+using socket_type_type = int;
+using socket_protocol_type = int;
 
 inline constexpr sockaddr_family_type family_v4 = AF_INET;
 inline constexpr sockaddr_family_type family_v6 = AF_INET6;

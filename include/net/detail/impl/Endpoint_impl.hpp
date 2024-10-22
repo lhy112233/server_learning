@@ -109,7 +109,8 @@ constexpr std::ostream& operator<<(std::ostream& os,
 }
 
 constexpr bool operator==(const Endpoint& lhs, const Endpoint& rhs) noexcept {
-  return lhs.to_ipaddress() == rhs.to_ipaddress();
+  return lhs.get_port() == rhs.get_port() &&
+         lhs.to_ipaddress() == rhs.to_ipaddress();
 }
 
 constexpr bool operator<(const Endpoint& lhs, const Endpoint& rhs) noexcept {

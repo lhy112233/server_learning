@@ -29,9 +29,8 @@ inline constexpr IPAddress::IPAddress(
     const hy::net::IPAddressV4::ip_type& addr) noexcept
     : ipv4{addr}, type_{IPAddressType::IPV4} {}
 
-inline constexpr IPAddress::IPAddress(
-    const hy::net::IPAddressV6::ip_type& addr,
-    sockaddr_scope_id_type scope) noexcept
+inline constexpr IPAddress::IPAddress(const hy::net::IPAddressV6::ip_type& addr,
+                                      sockaddr_scope_id_type scope) noexcept
     : ipv6{addr}, type_{IPAddressType::IPV6} {}
 
 inline constexpr IPAddress& IPAddress::operator=(
@@ -85,7 +84,7 @@ inline constexpr bool IPAddress::is_unspecified() const noexcept {
 }
 
 inline constexpr IPAddress IPAddress::from_string(std::string_view str,
-                                                 std::uint16_t args) {
+                                                  std::uint16_t args) {
   auto addr = from_string_nothrow(str, args);
   if (addr.has_value()) {
     return addr.value();
@@ -95,7 +94,8 @@ inline constexpr IPAddress IPAddress::from_string(std::string_view str,
 }
 
 inline constexpr std::expected<IPAddress, std::error_code>
-IPAddress::from_string_nothrow(std::string_view str, std::size_t args) noexcept {
+IPAddress::from_string_nothrow(std::string_view str,
+                               std::size_t args) noexcept {
   std::expected<IPAddress, std::error_code> ret =
       IPAddressV4::from_string(str, std::nothrow);
   if (ret.has_value() ||
